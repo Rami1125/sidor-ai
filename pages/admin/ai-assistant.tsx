@@ -26,9 +26,11 @@ const STATUS_MAP: any = {
 };
 
 const QUICK_QUERIES = [
-  "כמה הזמנות יש היום?", "מצב מכולות", "העברות היום", "כמה סופקו?", 
-  "סטטוס שארק 30", "חיפוש לקוח", "דוח יומי", "מכולות לפינוי"
+  "כמה הזמנות יש היום?", "מה מצב המכולות בשטח?", "האם היו העברות היום?",
+  "כמה הזמנות סופקו?", "מי הנהג הפעיל ביותר היום?", "סטטוס שארק 30",
+  "חיפוש לפי שם לקוח", "דוח יומי מקוצר", "הזמנות ללא נהג", "מכולות שצריכות פינוי"
 ];
+
 
 const getCountdown = (orderTime: string) => {
   if (!orderTime) return null;
@@ -71,7 +73,7 @@ export default function SabanAIAssistant() {
     setMessages(prev => [...prev, { role: 'user', content: query }]);
     setLoading(true); setInput('');
     try {
-      const res = await fetch('/api/ai-analyst', {
+      const res = await fetch('/api/ai-analyst1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query })
