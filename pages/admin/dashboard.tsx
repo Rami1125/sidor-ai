@@ -30,7 +30,8 @@ export default function SabanUltimateControlCenter() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
+  const RAMI_AVATAR = "https://media-mrs2-2.cdn.whatsapp.net/v/t61.24694-24/620186722_866557896271587_5747987865837500471_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AG_JCByU59rXu4ybPiRgaD2riDMbb0ujm-XlzxUbmgPXA&oe=69D7EBEB&_nc_sid=5e03e0&_nc_cat=111";
+  const DEFAULT_AVATAR = "https://ui-avatars.com/api/?name=Rami+Saban&background=10b981&color=fff";
   useEffect(() => {
     setMounted(true);
     fetchData();
@@ -125,12 +126,7 @@ export default function SabanUltimateControlCenter() {
                         </div>
                       </div>
 
-                      <div className="mt-8 flex items-center gap-4 border-t border-slate-100 pt-8">
-                        <img 
-                          src={DRIVERS.find(d => d.name === order.driver_name)?.img || 'https://i.postimg.cc/T34X4BqB/rami-avatar.jpg'} 
-                          className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500"
-                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://i.postimg.cc/mD8zQcby/rami.jpg'; }}
-                        />
+                      <div className="mt-8 flex items-center gap-4 border-t border-slate-100 pt-8">/>
                         <div>
                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">נהג מבצע</span>
                           <p className="text-lg font-black">{order.driver_name}</p>
