@@ -11,26 +11,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!apiKey) return res.status(200).json({ answer: "⚠️ שגיאת מפתח (GEMINI_API_KEY חסר)." });
 
   const today = new Date().toISOString().split('T')[0];
-  const modelPool = ["gemini-2.0-flash", "gemini-1.5-flash"]; 
-
+    const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-1.5-pro"];  
   try {
-    // משיכת דאטה בזמן אמת לתוך ההקשר של ה-AI
-    const [{ data: orders }, { data: containers }] = await Promise.all([
+    // משיכת נתונים מ-Supabase
+    const [orders, containers, transfers] = await Promise.all([
       supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'deleted'),
-      supabase.from('container_management').select('*').eq('is_active', true)
+      supabase.from('container_management').select('*').eq('start_date', today).neq('status', 'deleted'),
+      supabase.from('transfers').select('*').eq('transfer_date', today)
     ]);
 
-    const systemPrompt = `
-      זהות: SABAN OS CORE - המוח התפעולי של ח.סבן.
-      הקשר היום: ${today}
-      נתוני הובלות: ${JSON.stringify(orders || [])}
-      נתוני מכולות: ${JSON.stringify(containers || [])}
+    const contextData = `
+      נתוני מערכת Saban OS (${today}):
+      - חומרים והובלות: ${JSON.stringify(orders.data || [])}
+      - מכולות (הצבה/החלפה/הוצאה): ${JSON.stringify(containers.data || [])}
+      - העברות: ${JSON.stringify(transfers.data || [])}
+    `;
 
-      חוקים:
-      1. תענה בעברית פשוטה, חדה ומקצועית.
-      2. אם מזוהה משימה דחופה (פחות משעה), תציין זאת בבולד.
-      3. תמיד תפנה למשתמש כ"בוס".
-      4. תשתמש באייקונים מתאימים (📊, 🚚, 🏗️).
+    const prompt = `
+      זהות: Saban OS Core - מוח תפעולי ויזואלי ונקי.
+      משימה: הפקת דוח ישיר לבוס על בסיס הנתונים בלבד.
+      
+      חוקי עיצוב (קשיח):
+      1. איסור על Markdown כפול (**). השתמש בכוכבית אחת (*) בלבד להדגשה.
+      2. כותרת: 📊 *סיכום תפעולי | [נושא]*
+      3. מבנה שורה (חובה להפריד שורות לאייקון):
+         ![Icon]([Link])
+         • לקוח: *[שם]* | סטטוס: *[מצב]*,
+         
+      4. לינקים לאייקונים (ירוק וואטסאפ):
+         - הצבה: https://img.icons8.com/?size=48&id=12119&format=png&color=00a884
+         - החלפה: https://img.icons8.com/?size=48&id=ifMVi1WVk8u2&format=png&color=00a884
+         - הוצאה: https://img.icons8.com/?size=48&id=12122&format=png&color=00a884
+         - חומרים: https://img.icons8.com/?size=48&id=823&format=png&color=00a884
+
+      5. חתימה בסוף: ![Saban](https://cdn-icons-png.flaticon.com/512/2318/2318048.png)
+
+      חוקי מענה: ענה רק על מה שנשאל, בלי נימוסים. אם אין מידע - "אין מידע להיום."
+
+      הנתונים:
+      ${contextData}
+
+      שאלה: "${query}"
     `;
 
     // לוגיקת ה-Fallback של המודלים
