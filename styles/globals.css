@@ -2,58 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 248, 249, 250;
-  --background-end-rgb: 241, 243, 245;
-}
-
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow: hidden; /* מניעת סקרולר כפול באפליקציה */
+  background-color: #e5ddd5; /* רקע וואטסאפ קלאסי */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   height: 100vh;
 }
 
-/* אפקט זכוכית יוקרתי (Glassmorphism) */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+/* בועות צ'אט מרובעות עם פינה חדה */
+.bubble {
+  position: relative;
+  max-width: 85%;
+  padding: 8px 12px;
+  font-size: 14.5px;
+  box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+  margin-bottom: 4px;
 }
 
-/* בועות צ'אט בסגנון וואטסאפ (מרובעות עם פינה חדה) */
-.chat-bubble-me {
-  background-color: #d9fdd3; /* צבע ירוק וואטסאפ בהיר */
-  color: #111b21;
-  border-radius: 12px;
-  border-top-right-radius: 0; /* הפינה החדה לשולח */
-  border: 1px solid rgba(0,0,0,0.05);
+.bubble-me {
+  background-color: #d9fdd3;
+  align-self: flex-start;
+  border-radius: 8px;
+  border-top-right-radius: 0;
 }
 
-.chat-bubble-them {
+.bubble-them {
   background-color: #ffffff;
-  color: #111b21;
-  border-radius: 12px;
-  border-top-left-radius: 0; /* הפינה החדה למקבל */
-  border: 1px solid rgba(0,0,0,0.05);
+  align-self: flex-end;
+  border-radius: 8px;
+  border-top-left-radius: 0;
 }
 
-/* סקרולר עדין מאוד */
-::-webkit-scrollbar {
-  width: 4px;
+/* תפריט צד נפרס (Overlay) */
+.side-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 280px;
+  background: white;
+  z-index: 1000;
+  box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.1);
-  border-radius: 10px;
+
+.side-drawer.open {
+  transform: translateX(0);
 }
