@@ -48,7 +48,24 @@ export default function SabanGroupChat() {
     const { data } = await supabase.from('group_messages').select('*').order('created_at', { ascending: true });
     setMessages(data || []);
   };
+// בתוך ה-useEffect של הצ'אט
+const playNotificationSound = () => {
+  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+  audio.play().catch(err => console.log("Sound blocked until user interacts with page"));
+};
 
+// בתוך ה-on('postgres_changes'...)
+if (payload.new.sender_name !== 'ראמי מסארווה') {
+  playNotificationSound();
+  
+  // שליחת התראה ויזואלית אם האפליקציה ברקע
+  if (Notification.permission === "granted") {
+    new Notification(`הודעה חדשה מ${payload.new.sender_name}`, {
+      body: payload.new.content,
+      icon: 'https://i.postimg.cc/3wTMxG7W/ai.jpg'
+    });
+  }
+}
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !currentUser) return;
