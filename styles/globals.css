@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 224, 224, 224;
-  --background-start-rgb: 5, 5, 5;
-  --background-end-rgb: 0, 0, 0;
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 248, 249, 250;
+  --background-end-rgb: 241, 243, 245;
 }
 
 body {
@@ -17,30 +17,43 @@ body {
     )
     rgb(var(--background-start-rgb));
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow-x: hidden;
-  margin: 0;
-  padding: 0;
+  overflow: hidden; /* מניעת סקרולר כפול באפליקציה */
+  height: 100vh;
 }
 
-/* אפקט ה-Glassmorphism לכרטיסי המשימות */
+/* אפקט זכוכית יוקרתי (Glassmorphism) */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* עיצוב הסקרולר (פס הגלילה) בצבע אמרלד של סבן */
+/* בועות צ'אט בסגנון וואטסאפ (מרובעות עם פינה חדה) */
+.chat-bubble-me {
+  background-color: #d9fdd3; /* צבע ירוק וואטסאפ בהיר */
+  color: #111b21;
+  border-radius: 12px;
+  border-top-right-radius: 0; /* הפינה החדה לשולח */
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.chat-bubble-them {
+  background-color: #ffffff;
+  color: #111b21;
+  border-radius: 12px;
+  border-top-left-radius: 0; /* הפינה החדה למקבל */
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* סקרולר עדין מאוד */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: #050505;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1a1a1a;
+  background: rgba(0,0,0,0.1);
   border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #10b981;
 }
