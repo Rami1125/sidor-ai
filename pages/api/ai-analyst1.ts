@@ -17,31 +17,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [{ data: orders }, { data: containers }] = await Promise.all([
       supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'deleted'),
       supabase.from('container_management').select('*').eq('is_active', true)
-    ]);
+     const systemPrompt = `
+      זהות:המוח התפעולי של ראמי (ח. סבן). 
+      סגנון: מנהל עבודה חד, תמציתי, ויזואלי. אפס נימוסים, מקסימום נתונים.
+      תאריך היום: ${today}
 
-    // הגדרת ה-System Prompt (חייב להיות לפני הלולאה)
-    const systemPrompt = `
-      זהות: העוזר האישי של ראמי (ח. סבן). סגנון: מקצועי, חד, ענייני.
-      נתוני מערכת היום (${today}):
+      נתוני המערכת הנוכחיים:
       - הובלות: ${JSON.stringify(orders || [])}
       - מכולות: ${JSON.stringify(containers || [])}
+      - העברות: ${JSON.stringify(transfers || [])}
 
-      תפקיד: זיהוי והזרקת JSON מדויק למשימות.
-      1. ORDER (חומרים): נהג חכמת/עלי.
-      2. CONTAINER (מכולות): קבלן שארק 30/כראדי 32/שי שרון 40.
-         פעולות: "הצבה", "החלפה", "הוצאה".
-      3. TRANSFER (העברות): מהחרש/מהתלמיד.
+      חוקי מענה ועיצוב (קשיח):
+      1. מבנה תשובה: אייקון רלוונטי -> כותרת מודגשת (*) -> נתונים בבולטים.
+      2. הדגשה: השתמש בכוכבית אחת (*) בלבד למילים קריטיות (לקוח, שעה, נהג).
+      3. אייקונים ויזואליים (Icons8):
+         - הובלה/חומרים: ![ORDER](https://img.icons8.com/?size=40&id=823&format=png&color=00a884)
+         - הצבת מכולה: ![IN](https://img.icons8.com/?size=40&id=12119&format=png&color=00a884)
+         - הוצאת מכולה: ![OUT](https://img.icons8.com/?size=40&id=12122&format=png&color=ea0038)
+      4. התרעות: אם יש "הזמנה ללא נהג", פתח ב-⚠️ *אזהרה: הזמנה ללא שיבוץ*.
 
-      הזרק JSON מדויק בפורמט הזה בלבד:
+      חוקי הזרקת JSON:
+      בכל זיהוי של משימה חדשה או עדכון, חובה להוסיף בסוף המענה:
       DATA_START{
         "type": "ORDER" | "CONTAINER" | "TRANSFER",
-        "action_type": "הצבה" | "החלפה" | "הוצאה",
+        "action_type": "הצבה" | "החלפה" | "הוצאה" | null,
         "client": "שם הלקוח",
         "address": "כתובת",
         "date": "${today}",
         "time": "HH:mm",
-        "executor": "נהג או קבלן"
+        "executor": "חכמת" | "עלי" | "שארק 30" | "כראדי 32" | "שי שרון 40"
       }DATA_END
+
+      משימות מוגדרות:
+      - ORDER: נהג *חכמת* או *עלי*.
+      - CONTAINER: קבלן *שארק 30*, *כראדי 32* או *שי שרון 40*.
+      - TRANSFER: משימה בין סניף *החרש* לסניף *התלמיד*.
     `;
 
     let aiText = "";
