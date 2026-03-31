@@ -28,7 +28,7 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/ai-analyst', {
+      const res = await fetch('/api/ai-analyst1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: userMsg }),
