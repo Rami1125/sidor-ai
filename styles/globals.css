@@ -18,9 +18,11 @@ body {
     rgb(var(--background-start-rgb));
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
-/* אפקט זכוכית יוקרתי */
+/* אפקט ה-Glassmorphism לכרטיסי המשימות */
 .glass-panel {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
@@ -28,25 +30,17 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* עיצוב פס גלילה (Scrollbar) עדין */
+/* עיצוב הסקרולר (פס הגלילה) בצבע אמרלד של סבן */
 ::-webkit-scrollbar {
   width: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: #050505;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #1a1a1a;
   border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #10b981; /* צבע אמרלד של סבן */
-}
-
-/* אנימציה חלקה לשינוי צבעים */
-* {
-  transition: border-color 0.3s ease, background-color 0.3s ease;
+  background: #10b981;
 }
