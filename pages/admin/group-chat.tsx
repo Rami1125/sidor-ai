@@ -2,8 +2,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
-import { Send, Hash, Bell, Shield, Paperclip, MoreVertical, CheckCheck } from 'lucide-react';
+import { Send, Hash, Bell, Shield, Paperclip, MoreVertical, CheckCheck, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// הגדרת משתתפים לצא'ט עם תמונות מקצועיות UI
+const teamMembers: { [key: string]: string } = {
+  'הראל': 'https://i.postimg.cc/44r6V05C/harel.jpg',
+  'נתנאל ח. סבן': 'https://i.postimg.cc/3wTMxG7W/ai.jpg',
+  'ראמי מסארווה': 'https://i.postimg.cc/mD8zQcby/rami.jpg',
+  'SABAN AI': 'https://i.postimg.cc/3wTMxG7W/ai.jpg' // למוח יש את הלוגו של ה-AI
+};
 
 export default function SabanGroupChat() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -21,7 +29,7 @@ export default function SabanGroupChat() {
 
     // האזנה בזמן אמת עם לוגיקה תקינה ל-payload
     const channel = supabase
-      .channel('group-chat-v2')
+      .channel('group-chat-v3')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages' }, (payload: any) => {
         const newMessage = payload.new;
         setMessages((prev) => [...prev, newMessage]);
@@ -70,66 +78,118 @@ export default function SabanGroupChat() {
     };
 
     const { error } = await supabase.from('group_messages').insert([msgData]);
-    if (!error) setInput('');
+    if (!error) {
+      handleAIAutomation(input);
+      setInput('');
+    }
+  };
+
+  const handleAIAutomation = async (text: string) => {
+    // לוגיקה של המוח (AI): זרימת עבודה חכמה
+    if (text.includes('חסר') || text.includes('להזמין')) {
+      setTimeout(async () => {
+        await supabase.from('group_messages').insert([{
+          sender_name: 'SABAN AI',
+          sender_role: 'מערכת חכמה',
+          content: `🤖 @נתנאל, בוס, זיהיתי חוסר. המשימה נרשמה אוטומטית בדאשבורד הרכש.`,
+          type: 'ai'
+        }]);
+      }, 1500);
+    }
+    if (text.includes('העברה') || text.includes('להחרש')) {
+      setTimeout(async () => {
+        await supabase.from('group_messages').insert([{
+          sender_name: 'SABAN AI',
+          sender_role: 'מערכת חכמה',
+          content: `🤖 @איציק זהבי, בקשת העברה זוהתה. @עלי יקבל עדכון לסידור ברגע שראמי יאשר.`,
+          type: 'ai'
+        }]);
+      }, 1500);
+    }
   };
 
   return (
     <AppLayout>
-      <div className="flex flex-col h-[calc(100vh-120px)] max-w-6xl mx-auto bg-[#F8F9FA] rounded-[3rem] overflow-hidden shadow-2xl border border-white" dir="rtl">
+      <div className="flex flex-col flex-1 h-full max-w-5xl mx-auto bg-[#E5DDD5] shadow-2xl overflow-hidden" dir="rtl">
         
-        {/* Header */}
-        <div className="p-6 bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-[#0B0F1A] rounded-2xl flex items-center justify-center text-emerald-500">
-              <Hash size={28} />
+        {/* Chat Header (WhatsApp Style) */}
+        <div className="p-4 bg-[#F0F2F5] border-b border-slate-200 flex items-center justify-between shadow-sm z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg border-2 border-white">
+              <Hash size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-[#0B0F1A]">קבוצת הסידור | <span className="text-emerald-600">sabanos</span></h2>
-              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider italic">מערכת ניהול חכמה</p>
+              <h2 className="text-lg font-black text-[#111B21] tracking-tight">קבוצת הסידור | <span className="text-emerald-600">sabanos</span></h2>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider italic">מערכת ניהול חכמה - ח. סבן</p>
             </div>
           </div>
-          <div className="flex gap-2">
-             <button className="p-3 bg-slate-100 rounded-full text-slate-400 hover:text-emerald-600 transition-all"><Bell size={20} /></button>
+          <div className="flex items-center gap-1">
+             <button className="p-3 text-slate-500 hover:text-emerald-600 transition-all"><Bell size={19} /></button>
+             <button className="p-3 text-slate-500 hover:text-black"><MoreVertical size={19} /></button>
           </div>
         </div>
 
-        {/* Chat Area */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6 bg-gradient-to-b from-white to-[#F1F3F5]">
+        {/* Message Area (WhatsApp Bg + Meroobah) */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#E5DDD5] scroll-smooth">
           {messages.map((m, i) => {
             const isMe = m.sender_name === 'ראמי מסארווה';
+            const isAI = m.type === 'ai';
+            const avatarUrl = teamMembers[m.sender_name] || 'https://i.postimg.cc/T34X4BqB/default.jpg';
+
             return (
               <motion.div
                 key={m.id || i}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex ${isMe ? 'justify-start' : 'justify-end'}`}
+                className={`flex gap-3 ${isAI ? 'justify-center' : (isMe ? 'justify-start' : 'justify-end')}`}
               >
-                <div className={`max-w-[80%] p-5 rounded-[2rem] shadow-sm ${
-                  isMe ? 'bg-white text-slate-800 border border-slate-200 rounded-tr-none' : 'bg-emerald-600 text-white rounded-tl-none'
+                {!isAI && isMe && <img src={avatarUrl} alt={m.sender_name} className="w-8 h-8 rounded-full border border-slate-200 mt-1" />}
+                
+                <div className={`relative max-w-[80%] p-4 shadow-sm ${
+                  isAI 
+                  ? 'bg-[#0B0F1A] text-emerald-400 text-center text-xs border border-emerald-500/20 rounded-2xl flex items-center gap-2' 
+                  : (isMe ? 'chat-bubble-me' : 'chat-bubble-them')
                 }`}>
-                  <div className={`text-[10px] font-black uppercase mb-1 ${isMe ? 'text-emerald-600' : 'text-emerald-100'}`}>
-                    {m.sender_name} • {m.sender_role}
-                  </div>
-                  <p className="text-sm font-medium leading-relaxed">{m.content}</p>
-                  <div className="flex justify-end mt-1 opacity-40"><CheckCheck size={12} /></div>
+                  {isAI && <Bot size={16} className="text-emerald-500 shrink-0"/>}
+                  
+                  {!isAI && (
+                    <div className={`flex items-center gap-2 mb-1 text-[10px] font-black uppercase tracking-widest ${isMe ? 'text-emerald-700' : 'text-emerald-600'}`}>
+                      {m.sender_name} • {m.sender_role}
+                    </div>
+                  )}
+                  <p className="text-[14px] font-medium leading-relaxed">{m.content}</p>
+                  
+                  {!isAI && (
+                    <div className={`flex justify-end mt-1 opacity-50 text-slate-400`}>
+                      <span className="text-[9px] ml-1">10:09</span>
+                      <CheckCheck size={13} />
+                    </div>
+                  )}
                 </div>
+
+                {!isAI && !isMe && <img src={avatarUrl} alt={m.sender_name} className="w-8 h-8 rounded-full border border-slate-200 mt-1" />}
               </motion.div>
             );
           })}
         </div>
 
-        {/* Input */}
-        <div className="p-6 bg-white border-t border-slate-200">
-          <form onSubmit={sendMessage} className="flex items-center gap-4 bg-[#F1F3F5] p-2 rounded-[2.5rem] border border-slate-200">
-            <button type="button" className="p-3 text-slate-400 hover:text-emerald-600"><Paperclip size={22} /></button>
+        {/* Input Area (WhatsApp Input) */}
+        <div className="p-4 bg-[#F0F2F5] border-t border-slate-200">
+          <form onSubmit={sendMessage} className="flex items-center gap-3">
+            <button type="button" className="p-3 text-slate-500 hover:text-emerald-600 transition-all">
+              <Paperclip size={21} />
+            </button>
             <input 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="פקודה חדשה לסידור..."
-              className="flex-1 bg-transparent p-3 outline-none text-slate-800 font-bold"
+              placeholder="פקודה חדשה לסידור (למשל: '@נתנאל חסר מלט')..."
+              className="flex-1 bg-white border border-slate-200 p-4 rounded-[2rem] outline-none focus:border-emerald-500 transition-all text-sm placeholder:text-slate-400"
             />
-            <button type="submit" className="bg-[#0B0F1A] text-emerald-500 p-4 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all">
-              <Send size={22} className="rotate-180" />
+            <button 
+              type="submit" 
+              className="bg-emerald-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all"
+            >
+              <Send size={21} className="rotate-180" />
             </button>
           </form>
         </div>
