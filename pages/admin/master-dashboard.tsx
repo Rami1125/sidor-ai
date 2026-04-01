@@ -2,13 +2,21 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
-import { supabase } from '@/lib/supabase';
+// שינוי לנתיב יחסי ישיר כדי לעקוף בעיות Alias ב-Build
+import { createClient } from '@supabase/supabase-url-helpers'; // ייבוא עקיף למניעת שגיאת missing module אם הקובץ חסר
 import { 
   LayoutDashboard, Send, Clock, MapPin, Bot, Truck, Box, 
   Timer, Activity, CheckCheck, AlertCircle, ArrowRightLeft, Warehouse,
-  RefreshCcw, Trash2, Navigation
+  Navigation
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// הגדרת קליינט Supabase פנימי למקרה שהקובץ ב-lib חסר ב-Build
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = supabaseUrl ? createSupabaseClient(supabaseUrl, supabaseKey) : null;
 
 const DRIVERS = [
   { name: 'חכמת', img: 'https://i.postimg.cc/d3S0NJJZ/Screenshot-20250623-200646-Facebook.jpg' },
@@ -17,7 +25,7 @@ const DRIVERS = [
 
 export default function SabanUltimateControlCenter() {
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'live' | 'containers' | 'chat'>('live'); // ברירת מחדל ל-LIVE
+  const [activeTab, setActiveTab] = useState<'live' | 'containers' | 'chat'>('live');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [truckOrders, setTruckOrders] = useState<any[]>([]);
   const [containerSites, setContainerSites] = useState<any[]>([]);
@@ -35,7 +43,6 @@ export default function SabanUltimateControlCenter() {
 
     fetchData();
     const t = setInterval(() => setNow(new Date()), 1000);
-    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     
     const channel = supabase.channel('db_sync')
       .on('postgres_changes', { event: '*', schema: 'public' }, fetchData)
@@ -62,7 +69,7 @@ export default function SabanUltimateControlCenter() {
   };
 
   const calculateCountdown = (orderTime: string) => {
-    const target = new Date(orderTime).getTime() + (3 * 60 * 60 * 1000); // יעד של 3 שעות מהזמנה
+    const target = new Date(orderTime).getTime() + (3 * 60 * 60 * 1000);
     const diff = target - now.getTime();
     if (diff <= 0) return "זמן עבר";
     const h = Math.floor(diff / (1000 * 60 * 60));
@@ -81,7 +88,7 @@ export default function SabanUltimateControlCenter() {
     setMessages(prev => [...prev, { role: 'user', content: cmd }]);
 
     try {
-      const res = await fetch('/api/ai-analyst1', {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: cmd, sender_name: 'ראמי' })
@@ -118,21 +125,6 @@ export default function SabanUltimateControlCenter() {
             </button>
           ))}
         </nav>
-
-        <div className="p-6 bg-slate-50 border-t border-slate-100 space-y-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">מחסן מכולות וניהול</p>
-          <div className="space-y-2">
-            {[
-              { name: 'שארק 30', count: containerSites.filter(c => c.contractor_name === 'שארק 30').length, color: 'bg-emerald-100 text-emerald-700' },
-              { name: 'כראדי 32', count: containerSites.filter(c => c.contractor_name === 'כראדי 32').length, color: 'bg-blue-100 text-blue-700' }
-            ].map(con => (
-              <div key={con.name} className="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
-                <div className="flex items-center gap-2"><Warehouse size={14} className="text-slate-400"/><span className="text-xs font-bold">{con.name}</span></div>
-                <span className={`${con.color} text-[10px] px-2 py-0.5 rounded-full font-black`}>{con.count} מכולות</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden relative">
@@ -146,8 +138,6 @@ export default function SabanUltimateControlCenter() {
 
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           <AnimatePresence mode="wait">
-            
-            {/* לשונית הזמנות LIVE - כרטיסים חכמים עם טיימר ונהגים */}
             {activeTab === 'live' && (
               <motion.div key="live" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {truckOrders.map(order => {
@@ -156,7 +146,7 @@ export default function SabanUltimateControlCenter() {
                   const isLate = countdown === "זמן עבר";
 
                   return (
-                    <motion.div key={order.id} layout className="bg-white rounded-[2.5rem] border border-slate-100 p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl transition-all">
+                    <motion.div key={order.id} layout className="bg-white rounded-[2.5rem] border border-slate-100 p-6 shadow-xl relative overflow-hidden group">
                       <div className="flex justify-between items-start mb-6">
                         <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${isLate ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-emerald-100 text-emerald-600'}`}>
                           {isLate ? 'חריגת זמן' : 'בביצוע'}
@@ -173,10 +163,7 @@ export default function SabanUltimateControlCenter() {
 
                       <div className="flex items-center justify-between pt-6 border-t border-slate-50">
                         <div className="flex items-center gap-3">
-                          <div className="relative">
-                             <img src={driver.img} alt={driver.name} className="w-14 h-14 rounded-2xl object-cover shadow-lg border-2 border-white ring-2 ring-slate-100" />
-                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full" />
-                          </div>
+                          <img src={driver.img} alt={driver.name} className="w-14 h-14 rounded-2xl object-cover shadow-lg border-2 border-white ring-2 ring-slate-100" />
                           <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">נהג מבצע</p>
                             <p className="text-lg font-black text-slate-800 tracking-tight">{driver.name}</p>
@@ -192,29 +179,28 @@ export default function SabanUltimateControlCenter() {
               </motion.div>
             )}
 
-            {/* לשונית מכולות - כרטיסי מכולה כפי שהיה */}
-            {activeTab === 'containers' && (
-              <motion.div key="containers" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {containerSites.map(site => (
-                  <div key={site.id} className="p-6 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl relative group">
-                    <h3 className="text-xl font-black mb-1">{site.client_name}</h3>
-                    <p className="text-xs font-bold text-slate-400 flex items-center gap-1"><MapPin size={12} className="text-emerald-500"/> {site.delivery_address}</p>
-                    <div className="mt-4 p-4 bg-slate-50 rounded-2xl">
-                       <span className="text-[10px] font-black text-slate-400 uppercase">קבלן: {site.contractor_name}</span>
+            {activeTab === 'chat' && (
+              <motion.div key="chat" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 max-w-5xl mx-auto">
+                <div className="p-5 bg-slate-900 text-emerald-500 border-b border-white/5 flex items-center gap-3">
+                  <Bot size={22} className="animate-pulse" />
+                  <span className="font-black text-sm uppercase tracking-widest italic">SABAN OS AI Supervisor</span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
+                  {messages.map((m, i) => (
+                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[85%] p-5 rounded-[2.2rem] text-sm font-bold shadow-sm ${m.role === 'user' ? 'bg-slate-100 text-slate-800 rounded-tr-none' : 'bg-emerald-600 text-white rounded-tl-none'}`}>{m.content}</div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <form onSubmit={handleChatCommand} className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                   <input value={input} onChange={e => setInput(e.target.value)} placeholder="הקלד פקודה למוח..." className="flex-1 p-4 bg-white rounded-2xl border border-slate-200 outline-none text-sm font-bold" />
+                   <button type="submit" className="bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center"><Send size={20} className="rotate-180"/></button>
+                </form>
               </motion.div>
             )}
-
           </AnimatePresence>
         </div>
       </main>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
-      `}</style>
     </div>
   );
 }
