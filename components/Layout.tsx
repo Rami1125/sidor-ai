@@ -15,7 +15,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { name: 'הגדרות מערכת', href: '/settings', icon: Settings },
   ];
 
-  // רשימת צוות מעודכנת עם ID לזיהוי בצ'אט
+  // רשימת צוות מעודכנת עם IDs וקישורים
   const teamMembers = [
     { id: '22b540ab', name: 'הראל', role: 'מנכ"ל', avatar: 'https://ui-avatars.com/api/?name=Harel&background=059669&color=fff' },
     { id: '33c651bc', name: 'נתנאל ח. סבן', role: 'קניין', avatar: 'https://ui-avatars.com/api/?name=Netanel&background=0284c7&color=fff' },
@@ -31,7 +31,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </Head>
 
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 z-[100] px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => setIsMenuOpen(true)} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
@@ -46,7 +45,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Sidebar Drawer */}
       <AnimatePresence>
         {isMenuOpen && (
           <>
@@ -62,45 +60,45 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               className="fixed top-0 right-0 bottom-0 w-72 bg-white z-[120] p-6 shadow-2xl flex flex-col border-l border-slate-100"
             >
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
-                <span className="font-black italic text-lg text-emerald-600 font-bold tracking-tighter">SABAN OS</span>
+                <span className="font-black italic text-lg text-emerald-600 font-bold">SABAN OS</span>
                 <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-black">
                   <X size={22} />
                 </button>
               </div>
               
-              <nav className="space-y-1">
+              <nav className="space-y-1 overflow-y-auto scrollbar-hide">
                 {menuItems.map((item) => (
-                  <Link href={item.href} key={item.name} onClick={() => setIsMenuOpen(false)} className="block">
-                    <div className="flex items-center gap-4 p-4 hover:bg-emerald-50 rounded-2xl transition-all group">
+                  <Link href={item.href} key={item.name} onClick={() => setIsMenuOpen(false)}>
+                    <div className="flex items-center gap-4 p-4 hover:bg-emerald-50 rounded-2xl transition-all group cursor-pointer">
                       <item.icon size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
                       <span className="font-bold text-sm text-slate-800">{item.name}</span>
                     </div>
                   </Link>
                 ))}
+                
+                <div className="pt-6 mt-4 border-t border-slate-100">
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">צוות וקבוצות</p>
+                  {teamMembers.map(member => (
+                    <Link 
+                      href={`/chat?userId=${member.id}&name=${encodeURIComponent(member.name)}`} 
+                      key={member.id}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <div className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-all group cursor-pointer border border-transparent hover:border-slate-100 active:scale-95 mb-1">
+                        <div className="relative flex-shrink-0">
+                          <img src={member.avatar} alt={member.name} className="w-9 h-9 rounded-full border-2 border-white shadow-sm object-cover" />
+                          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-black text-slate-900 group-hover:text-emerald-600 transition-colors truncate">{member.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold leading-none truncate">{member.role}</p>
+                        </div>
+                        <ChevronLeft size={14} className="text-slate-200 group-hover:text-emerald-600 transition-all" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </nav>
-              
-              {/* צוות לחיץ - כאן התיקון */}
-              <div className="mt-auto pt-6 border-t border-slate-100 space-y-2">
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">צאט עם הצוות</p>
-                {teamMembers.map(member => (
-                  <Link 
-                    href={`/chat?userId=${member.id}&name=${encodeURIComponent(member.name)}`} 
-                    key={member.id}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-all group border border-transparent hover:border-slate-100 active:scale-95"
-                  >
-                    <div className="relative flex-shrink-0">
-                      <img src={member.avatar} alt={member.name} className="w-9 h-9 rounded-full border-2 border-white shadow-sm object-cover" />
-                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-black text-slate-900 group-hover:text-emerald-600 transition-colors truncate">{member.name}</p>
-                      <p className="text-[10px] text-slate-400 font-bold leading-none truncate">{member.role}</p>
-                    </div>
-                    <ChevronLeft size={14} className="text-slate-200 group-hover:text-emerald-600 transition-all" />
-                  </Link>
-                ))}
-              </div>
             </motion.div>
           </>
         )}
