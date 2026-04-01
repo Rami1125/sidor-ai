@@ -29,7 +29,6 @@ export default function MasterDashboard() {
 
   useEffect(() => {
     setMounted(true);
-    // זיהוי מכשיר וחיבור OneSignal
     const checkDevice = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
@@ -43,7 +42,7 @@ export default function MasterDashboard() {
     const t = setInterval(() => setNow(new Date()), 1000);
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     
-    const channel = supabase.channel('master_v2').on('postgres_changes', { event: '*', schema: 'public' }, fetchData).subscribe();
+    const channel = supabase.channel('master_v3').on('postgres_changes', { event: '*', schema: 'public' }, fetchData).subscribe();
     return () => { clearInterval(t); channel.unsubscribe(); };
   }, []);
 
@@ -61,14 +60,14 @@ export default function MasterDashboard() {
     const cmd = input; setInput(''); setLoading(true);
     setMessages(prev => [...prev, { role: 'user', content: cmd }]);
     try {
-      const res = await fetch('/api/ai-analyst1', {
+      const res = await fetch('/api/ai-analyst', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: cmd, sender_name: 'ראמי' })
       });
       const data = await res.json();
       setMessages(prev => [...prev, { role: 'ai', content: data.answer || data.reply }]);
-      if (audioRef.current) audioRef.current.play();
+      if (audioRef.current) audioRef.current.play().catch(() => {});
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -83,7 +82,6 @@ export default function MasterDashboard() {
           <meta name="apple-mobile-web-app-capable" content="yes" />
         </Head>
 
-        {/* Sidebar - Desktop Only */}
         {!isMobile && (
           <aside className="w-80 bg-white border-l border-slate-200 shadow-xl flex flex-col z-50">
             <div className="p-8 pb-4">
@@ -91,7 +89,6 @@ export default function MasterDashboard() {
                 <div className="p-2 bg-emerald-500 rounded-lg text-black"><Monitor size={20}/></div>
                 <span className="font-black text-xs uppercase tracking-widest text-slate-400">Desktop Mode</span>
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 text-center">סיכום מבצעי</p>
               <div className="space-y-2">
                 {DRIVERS.map(d => (
                   <div key={d.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
@@ -109,10 +106,7 @@ export default function MasterDashboard() {
           </aside>
         )}
 
-        {/* Main Interface */}
         <main className="flex-1 relative flex flex-col overflow-hidden w-full h-full">
-          
-          {/* Mobile Gateway Buttons - Floating Style */}
           {isMobile && (
             <div className="absolute bottom-24 left-4 right-4 z-50 flex gap-2">
                {['live', 'containers', 'chat'].map((tab) => (
@@ -129,23 +123,20 @@ export default function MasterDashboard() {
 
           <div className="flex-1 overflow-y-auto p-4 lg:p-10 scrollbar-hide pb-40 lg:pb-10">
             <AnimatePresence mode="wait">
-              
-              {/* דף הזמנות / מכולות - Edge to Edge */}
               {(activeTab === 'live' || activeTab === 'containers') && (
                 <motion.div 
                   initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                   className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-8"
                 >
                   {(activeTab === 'live' ? truckOrders : containerSites).map((item) => (
-                    <div key={item.id} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 relative group overflow-hidden">
+                    <div key={item.id} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 relative overflow-hidden group">
                        <div className="flex justify-between items-start mb-4">
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase text-white ${activeTab === 'live' ? 'bg-emerald-600' : 'bg-blue-600'}`}>
-                            {activeTab === 'live' ? 'ORDER' : item.action_type}
+                            {activeTab === 'live' ? 'ORDER' : (item.action_type || 'CONTAINER')}
                           </span>
                        </div>
                        <h3 className="text-2xl font-black tracking-tighter leading-tight mb-1">{item.client_info || item.client_name}</h3>
                        <p className="text-xs font-bold text-slate-400 mb-6 flex items-center gap-1"><MapPin size={12}/> {item.location || item.delivery_address}</p>
-                       
                        <div className="flex items-center gap-4 border-t border-slate-50 pt-4">
                           {activeTab === 'live' ? (
                             <>
@@ -162,7 +153,6 @@ export default function MasterDashboard() {
                 </motion.div>
               )}
 
-              {/* חדר צ'אט בגודל מלא */}
               {activeTab === 'chat' && (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
@@ -181,11 +171,10 @@ export default function MasterDashboard() {
                   </div>
                   <form onSubmit={handleChat} className="p-4 bg-slate-50 border-t flex gap-2">
                     <input value={input} onChange={e => setInput(e.target.value)} placeholder="פקודה למוח..." className="flex-1 p-4 bg-white rounded-2xl border border-slate-200 outline-none text-sm font-bold shadow-inner" />
-                    <button type="submit" className="bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center"><Send size={20} className="rotate-180"/></button>
+                    <button type="submit" className="bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-transform active:scale-90"><Send size={20} className="rotate-180"/></button>
                   </form>
                 </motion.div>
               )}
-
             </AnimatePresence>
           </div>
         </main>
@@ -193,6 +182,3 @@ export default function MasterDashboard() {
     </AppLayout>
   );
 }
-
-// Icon Helper
-const Warehouse = ({size, className}: any) => <Activity size={size} className={className} />;
