@@ -50,23 +50,28 @@ useEffect(() => {
     setContainerOrders(c || []);
   };
 
-  const calculateTimer = (targetTime: string) => {
-    const [hours, minutes] = targetTime.split(':').map(Number);
-    const target = new Date();
-    target.setHours(hours, minutes, 0);
-    const diff = target.getTime() - now.getTime();
-    const isPast = diff < 0;
-    const absDiff = Math.abs(diff);
-    const h = Math.floor(absDiff / 3600000);
-    const m = Math.floor((absDiff % 3600000) / 60000);
-    const s = Math.floor((absDiff % 60000) / 1000);
-    return { 
-      text: `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`, 
-      isUrgent: !isPast && diff < 1800000,
-      isPast 
-    };
-  };
+// פונקציית החישוב שמשתמשת ב-now המעודכן
+const calculateTimer = (targetTime: string) => {
+  if (!targetTime) return { text: '--:--:--', isUrgent: false, isPast: false };
+  
+  const [hours, minutes] = targetTime.split(':').map(Number);
+  const target = new Date();
+  target.setHours(hours, minutes, 0, 0);
 
+  const diff = target.getTime() - now.getTime();
+  const isPast = diff < 0;
+  const absDiff = Math.abs(diff);
+
+  const h = Math.floor(absDiff / 3600000);
+  const m = Math.floor((absDiff % 3600000) / 60000);
+  const s = Math.floor((absDiff % 60000) / 1000);
+
+  return {
+    text: `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+    isUrgent: !isPast && diff < 1800000, // פחות מחצי שעה
+    isPast
+  };
+};
   const updateStatus = async (id: string, table: string, newStatus: string) => {
     await supabase.from(table).update({ status: newStatus }).eq('id', id);
     setOpenStatusId(null);
