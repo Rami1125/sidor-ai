@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
-// שינוי לנתיב יחסי ישיר כדי לעקוף בעיות Alias ב-Build
-import { createClient } from '@supabase/supabase-url-helpers'; // ייבוא עקיף למניעת שגיאת missing module אם הקובץ חסר
+import { createClient } from '@supabase/supabase-js';
 import { 
   LayoutDashboard, Send, Clock, MapPin, Bot, Truck, Box, 
   Timer, Activity, CheckCheck, AlertCircle, ArrowRightLeft, Warehouse,
@@ -11,12 +10,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// הגדרת קליינט Supabase פנימי למקרה שהקובץ ב-lib חסר ב-Build
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-
+// אתחול Supabase ישיר עם הגנה ל-Build
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl ? createSupabaseClient(supabaseUrl, supabaseKey) : null;
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
 
 const DRIVERS = [
   { name: 'חכמת', img: 'https://i.postimg.cc/d3S0NJJZ/Screenshot-20250623-200646-Facebook.jpg' },
@@ -34,8 +31,6 @@ export default function SabanUltimateControlCenter() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(new Date());
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -88,7 +83,7 @@ export default function SabanUltimateControlCenter() {
     setMessages(prev => [...prev, { role: 'user', content: cmd }]);
 
     try {
-      const res = await fetch('/api/ai-analyst1', {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: cmd, sender_name: 'ראמי' })
