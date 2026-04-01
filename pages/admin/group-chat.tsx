@@ -11,10 +11,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // אווטארים יציבים כ-Fallback
 const teamPhotos: { [key: string]: string } = {
-  'הראל': 'https://ui-avatars.com/api/?name=Harel&background=0f172a&color=fff',
-  'נתנאל ח. סבן': 'https://ui-avatars.com/api/?name=Netanel&background=10b981&color=fff',
+  'הראל': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/425943135_310910548378865_3167279294851460849_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AH3gTV5kn0Pf4keryJCrFNpKX-8mVhfeB2zKUz7wJ0Nvw&oe=69D993CF&_nc_sid=5e03e0&_nc_cat=104',
+  'נתנאל ח. סבן': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/467941675_543027198650536_1927742493184989891_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AGRrdYa7CA723729zlwkwChykGTGRtx5N82AG7Yx5IIOg&oe=69D9A3AF&_nc_sid=5e03e0&_nc_cat=105',
   'ראמי מסארווה': 'https://ui-avatars.com/api/?name=Rami+Saban&background=10b981&color=fff',
-  'איציק זהבי': 'https://ui-avatars.com/api/?name=Itzik&background=0284c7&color=fff',
+  'איציק זהבי': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/138846705_247951546693089_6505800604178808158_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AHK9fHN2ium3-Y-pHN00dmHYmnmaUvizKUwEBg2m5EX5w&oe=69D9AF10&_nc_sid=5e03e0&_nc_cat=105',
   'SABAN AI': 'https://ui-avatars.com/api/?name=AI&background=000&color=10b981'
 };
 
