@@ -13,9 +13,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 const teamPhotos: { [key: string]: string } = {
   'הראל': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/425943135_310910548378865_3167279294851460849_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AH3gTV5kn0Pf4keryJCrFNpKX-8mVhfeB2zKUz7wJ0Nvw&oe=69D993CF&_nc_sid=5e03e0&_nc_cat=104',
   'נתנאל ח. סבן': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/467941675_543027198650536_1927742493184989891_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AGRrdYa7CA723729zlwkwChykGTGRtx5N82AG7Yx5IIOg&oe=69D9A3AF&_nc_sid=5e03e0&_nc_cat=105',
-  'ראמי מסארווה': 'https://ui-avatars.com/api/?name=Rami+Saban&background=10b981&color=fff',
+  'ראמי מסארווה': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/620186722_866557896271587_5747987865837500471_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AFKllJapRvBGqEZN5CTHK3ku-lrqGuBQObfJ9lH2NuEEw&oe=69D9ADEB&_nc_sid=5e03e0&_nc_cat=111',
   'איציק זהבי': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/138846705_247951546693089_6505800604178808158_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AHK9fHN2ium3-Y-pHN00dmHYmnmaUvizKUwEBg2m5EX5w&oe=69D9AF10&_nc_sid=5e03e0&_nc_cat=105',
-  'SABAN AI': 'https://ui-avatars.com/api/?name=AI&background=000&color=10b981'
+  'SABAN AI': 'https://i.postimg.cc/3wTMxG7W/ai.jpg'
+  'אורן המחסנאי': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/363069350_240772492167785_3931567360848718727_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AG7jNNJwFQfm7M0PfcaezqgISLGrw6_GBoTaN90Nzp_Rg&oe=69D998A6&_nc_sid=5e03e0&_nc_cat=107',
+
 };
 
 export default function SabanGroupChat() {
@@ -140,7 +142,7 @@ export default function SabanGroupChat() {
         </AnimatePresence>
 
         {/* Chat Main Area */}
-        <div className="flex-1 flex flex-col h-full bg-[url('https://i.postimg.cc/9M4Z9k0p/wa-bg.png')] bg-repeat relative">
+        <div className="flex-1 flex flex-col h-full bg-[url('https://scontent.ftlv6-1.fna.fbcdn.net/v/t1.6435-9/39514714_2143148892402705_566003284326744064_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=13d280&_nc_ohc=3MOCV9p19bAQ7kNvwGjUD7-&_nc_oc=Adr-EnGjYrgAJJ7Nrwj2-3gt2TTR7rcVQMX4BYy_AlqIwcNEHb3c7GZyyj7F632Xlxw&_nc_zt=23&_nc_ht=scontent.ftlv6-1.fna&_nc_gid=Vyqg2FJ9TEA1qjlybqyz2g&_nc_ss=7a389&oh=00_Af3LQv3QL7mxPkKAndOIqjUD7LK9ODJGOClVDCLm5tyNKw&oe=69F401C2')] bg-repeat relative">
           
           {/* Header */}
           <header className="h-16 bg-[#F0F2F5] border-b border-gray-300 flex items-center justify-between px-4 shrink-0 z-10 shadow-sm">
