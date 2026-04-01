@@ -1,3 +1,4 @@
+// pages/api/ai-supervisor-core.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -11,85 +12,86 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!apiKey) return res.status(200).json({ reply: "⚠️ חסר GEMINI_API_KEY." });
 
-  // 1. הגדרת מאגר המודלים ורוטציה
-  const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
-  let aiResponse = null;
-  let selectedModelName = "";
-
-  // 2. שליפת נתוני LIVE להקשר
+  // 1. שליפת נתוני LIVE להקשר מקסימלי
   const [{ data: orders }, { data: containers }] = await Promise.all([
     supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'history'),
     supabase.from('container_management').select('*').eq('is_active', true)
   ]);
 
   const genAI = new GoogleGenerativeAI(apiKey);
+  const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
+  let aiResponse = null;
 
-  // לוגיקת ניסיון מעבר בין מודלים (Rotation)
   for (const modelName of modelPool) {
     try {
-      selectedModelName = modelName;
       const model = genAI.getGenerativeModel({ model: modelName });
-       const systemPrompt = `
+      const systemPrompt = `
         זהות: אתה SABAN AI, המוח המבצע של ח. סבן. הבוס הוא ראמי.
         
-        חוקי ברזל:
-        1. כל אישור פעולה חייב להסתיים בבלוק JSON בין DATA_START ל-DATA_END.
-        2. חוק המחיקה: כשראמי מבקש למחוק, מצא את ה-ID (UUID) מהנתונים למטה והשתמש בו ב-JSON.
-        3. חוק הסמכות: פקודה מראמי מבוצעת מיד ללא אישור נוסף.
-        4. תיוגים: מלאי -> @נתנאל, סידור -> @יואב, לוגיסטיקה -> @איציק זהבי.
+        הנחיות לביצוע פקודות מורכבות:
+        1. החלפת מכולה (EXCHANGE): דורשת שני צעדים - עדכון המכולה הקיימת ל-is_active: false והזרקת מכולה חדשה.
+        2. עדכון סטטוס: שינוי סטטוס הזמנה/מכולה לפי ID.
+        3. חוק ה-JSON: כל פקודה חייבת להיות בתוך DATA_START ו-DATA_END.
+        4. תמיכה במערך פקודות: ניתן לשלוח מערך של פעולות (Array) בתוך ה-JSON.
 
         נתוני שטח נוכחיים:
         הובלות: ${JSON.stringify(orders || [])}
         מכולות: ${JSON.stringify(containers || [])}
- 
-מבנה פקודות:  
-        - INSERT: DATA_START{"action": "INSERT", "table": "orders", "data": {...}}DATA_END
-        - DELETE: DATA_START{"action": "DELETE", "table": "orders", "id": "UUID"}DATA_END
-        - UPDATE: DATA_START{"action": "UPDATE", "table": "orders", "id": "UUID", "data": {...}}DATA_END
-           סגנון כתיבה: עברית פשוטה, חדה, "בגובה העיניים" של מפתח מנוסה. אל תחזור על השאלה. תן פתרון פרקטי וסיים ב-TL;DR.
-`;
+
+        פורמט JSON נדרש לפקודות:
+        {
+          "actions": [
+            {"type": "INSERT", "table": "orders", "data": {...}},
+            {"type": "UPDATE", "table": "container_management", "id": "UUID", "data": {"is_active": false}},
+            {"type": "DELETE", "table": "orders", "id": "UUID"}
+          ]
+        }
+
+        סגנון כתיבה: עברית של "מנהל עבודה" - חד, תכליתי, מקצועי. בלי חפירות.
+      `;
+
       const chat = model.startChat({
         history: [{ role: "user", parts: [{ text: systemPrompt }] }],
       });
 
       const result = await chat.sendMessage(`הודעה מ${sender_name || 'ראמי'}: ${query}`);
       aiResponse = result.response.text();
-      
-      if (aiResponse) break; // הצלחנו? צא מהלופ
-
+      if (aiResponse) break;
     } catch (err) {
-      console.warn(`מודל ${modelName} נכשל, מנסה את הבא...`, err);
-      continue; // נכשל? נסה את המודל הבא ב-Pool
+      console.warn(`Model ${modelName} failed, retrying...`);
     }
   }
 
-  if (!aiResponse) return res.status(200).json({ reply: "בוס, כל המודלים עמוסים. תנסה עוד דקה." });
+  if (!aiResponse) return res.status(200).json({ reply: "בוס, המוח עמוס. נסה שוב." });
 
   try {
-    // 3. ביצוע הפקודות ב-Database (הזרקה/מחיקה)
     const jsonMatch = aiResponse.match(/DATA_START([\s\S]*?)DATA_END/);
-    let executionNote = "";
+    let executionLog = [];
 
     if (jsonMatch) {
-      const command = JSON.parse(jsonMatch[1]);
-      if (command.action === 'INSERT') {
-        await supabase.from(command.table).insert([command.data]);
-        executionNote = "✅ הוזרק ללוח.";
-      } else if (command.action === 'DELETE') {
-        await supabase.from(command.table).delete().eq('id', command.id);
-        executionNote = "🗑️ נמחק מהמערכת.";
-      } else if (command.action === 'UPDATE') {
-        await supabase.from(command.table).update(command.data).eq('id', command.id);
-        executionNote = "🔄 עודכן בהצלחה.";
+      const { actions } = JSON.parse(jsonMatch[1]);
+      
+      for (const action of actions) {
+        if (action.type === 'INSERT') {
+          await supabase.from(action.table).insert([action.data]);
+          executionLog.push(`✅ נוצר ב-${action.table}`);
+        } else if (action.type === 'UPDATE') {
+          await supabase.from(action.table).update(action.data).eq('id', action.id);
+          executionLog.push(`🔄 עודכן ב-${action.table}`);
+        } else if (action.type === 'DELETE') {
+          await supabase.from(action.table).delete().eq('id', action.id);
+          executionLog.push(`🗑️ נמחק מ-${action.table}`);
+        }
       }
     }
 
     const cleanReply = aiResponse.replace(/DATA_START[\s\S]*?DATA_END/, '').trim();
-    return res.status(200).json({ 
-      reply: executionNote ? `${executionNote}\n\n${cleanReply}` : cleanReply 
-    });
+    const prefix = executionLog.length > 0 ? `${executionLog.join(' | ')}\n\n` : "";
+    
+    return res.status(200).json({ reply: prefix + cleanReply });
 
   } catch (error) {
-    return res.status(200).json({ reply: "בוס, המשימה בוצעה אבל יש שגיאה בעיבוד התשובה." });
+    console.error("Execution Error:", error);
+    return res.status(200).json({ reply: "בוס, הפקודה הובנה אבל הביצוע ב-DB נכשל." });
   }
 }
