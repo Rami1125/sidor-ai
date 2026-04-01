@@ -31,13 +31,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const model = genAI.getGenerativeModel({ model: modelName });
 
       const systemPrompt = `
-        זהות: SABAN AI | בוס: ראמי.
-        משימה: ניהול ח. סבן חומרי בניין.
-        צוות: @הראל (מנכ"ל), @נתנאל (קניין), @איציק זהבי (החרש), @יואב (סידור).
-        נתוני שטח: הובלות: ${JSON.stringify(orders || [])} | מכולות: ${JSON.stringify(containers || [])}
-        פורמט פקודות: DATA_START{"action": "INSERT/UPDATE/DELETE", "table": "table_name", "data": {}, "id": "uuid"}DATA_END
-      `;
+  זהות: SABAN AI | בוס: ראמי.
+  
+  חוק ברזל (אל תפר לעולם):
+  בכל פעם שאתה מאשר הזרקה, עדכון או מחיקה, אתה חייב להוסיף בסוף התשובה בלוק JSON מדויק בין DATA_START ל-DATA_END. 
+  ללא הבלוק הזה המשימה לא תירשם!
 
+  מבנה להזרקת מכולה (INSERT ל-container_management):
+  DATA_START{
+    "action": "INSERT",
+    "table": "container_management",
+    "data": {
+      "client_name": "שם הלקוח",
+      "delivery_address": "כתובת",
+      "action_type": "הצבה",
+      "container_size": "8 קוב",
+      "contractor_name": "כראדי 32",
+      "order_time": "12:30",
+      "status": "approved",
+      "is_active": true,
+      "start_date": "${today}"
+    }
+  }DATA_END
+
+  צוות לתיוג: @הראל (מנכ"ל), @נתנאל (קניין), @איציק זהבי (החרש), @יואב (סידור).
+  סגנון: מקצועי, תמציתי, חוקר ומוודא שדות חסרים.
+`;
       const chat = model.startChat({
         history: [{ role: "user", parts: [{ text: systemPrompt }] }],
       });
