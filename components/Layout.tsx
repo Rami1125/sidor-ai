@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#111B21] font-sans" dir="rtl">
       <Head>
-        <title>SABAN OS</title>
+        <title>לוח סידור הזמנות </title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </Head>
 
