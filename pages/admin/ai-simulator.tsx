@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import Head from 'next/head';
 import Layout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
 import { 
   Zap, Search, ShieldCheck, Play, 
-  MessageSquare, Terminal, RefreshCw, Cpu, Database
+  MessageSquare, Terminal, RefreshCw, Cpu, Database, AlertCircle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -50,18 +51,22 @@ export default function AiSimulator() {
   return (
     <Layout>
       <div className="min-h-screen bg-[#F8F9FA] pb-20" dir="rtl">
+        <Head>
+          <title>SABAN OS | AI Simulator</title>
+        </Head>
+
         {/* Header - PWA Style */}
         <div className="bg-white border-b border-slate-200 p-6 pt-10">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2 italic">
                 <Cpu className="text-emerald-600" size={28} /> סימולטור חוקי מוח
               </h1>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">בדיקת לוגיקה בזמן אמת</p>
             </div>
-            <div className="flex gap-2">
-               <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-               <span className="text-[10px] font-bold text-slate-400">ENGINE LIVE</span>
+            <div className="flex gap-2 items-center">
+               <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Engine Live</span>
             </div>
           </div>
         </div>
@@ -69,8 +74,8 @@ export default function AiSimulator() {
         <div className="max-w-4xl mx-auto p-4 space-y-6 mt-6">
           
           {/* אזור הקלט - כהה ויוקרתי */}
-          <section className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl text-white">
-            <label className="text-xs font-black text-emerald-400 uppercase mb-4 block tracking-tighter">הזן שאילתה לבדיקת חוקים</label>
+          <section className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl text-white border-b-4 border-emerald-500">
+            <label className="text-[11px] font-black text-emerald-400 uppercase mb-4 block tracking-[0.2em]">הזן שאילתה לבדיקת חוקים</label>
             <div className="flex gap-3">
               <input 
                 value={query}
@@ -81,7 +86,7 @@ export default function AiSimulator() {
               <button 
                 onClick={runSimulation}
                 disabled={isSimulating}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 rounded-2xl font-black flex items-center gap-2 transition-all disabled:opacity-50"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 rounded-2xl font-black flex items-center gap-2 transition-all disabled:opacity-50 active:scale-95 shadow-lg"
               >
                 {isSimulating ? <RefreshCw className="animate-spin" /> : <Play fill="currentColor" size={18} />}
               </button>
@@ -95,7 +100,7 @@ export default function AiSimulator() {
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between h-48">
               <div className="flex justify-between">
                 <Terminal className="text-slate-400" size={24} />
-                <span className="text-[10px] font-black text-slate-300 uppercase">System Log</span>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">System Log</span>
               </div>
               <div className="mt-4">
                 {isSimulating ? (
@@ -119,7 +124,7 @@ export default function AiSimulator() {
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col h-48">
               <div className="flex justify-between mb-4">
                 <MessageSquare className="text-emerald-500" size={24} />
-                <span className="text-[10px] font-black text-slate-300 uppercase">AI Output</span>
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">AI Output</span>
               </div>
               <p className="text-sm font-black text-slate-700 leading-relaxed italic">
                 {aiResponse || "הזן שאילתה כדי לראות איך המוח יגיב לצוות בשטח..."}
@@ -129,29 +134,34 @@ export default function AiSimulator() {
 
           {/* טבלת חוקים פעילים - שליפה מהירה */}
           <section className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="font-black text-slate-800 flex items-center gap-2">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <h2 className="font-black text-slate-800 flex items-center gap-2 italic">
                 <Database size={18} className="text-slate-400" /> מאגר חוקים נוכחי
               </h2>
-              <span className="text-[10px] font-black bg-white px-3 py-1 rounded-full border border-slate-200">{rules.length} חוקים</span>
+              <span className="text-[10px] font-black bg-white px-3 py-1 rounded-full border border-slate-200 text-slate-500 shadow-sm">{rules.length} חוקים פעילים</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-right">
                 <thead>
-                  <tr className="text-[10px] font-black text-slate-400 uppercase border-b border-slate-50">
-                    <th className="p-4">פעולה</th>
-                    <th className="p-4">תנאי</th>
-                    <th className="p-4">הנחיית המוח</th>
+                  <tr className="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
+                    <th className="p-6">פעולה</th>
+                    <th className="p-6">תנאי</th>
+                    <th className="p-6 text-emerald-600">הנחיית המוח</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {rules.map(rule => (
-                    <tr key={rule.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4 text-xs font-black text-emerald-600">{rule.action_type}</td>
-                      <td className="p-4 text-xs font-bold text-slate-500">{rule.condition || 'ללא'}</td>
-                      <td className="p-4 text-xs font-medium text-slate-800">{rule.instruction}</td>
+                    <tr key={rule.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="p-6 text-xs font-black text-slate-900 uppercase">{rule.action_type}</td>
+                      <td className="p-6 text-xs font-bold text-slate-500">{rule.condition || '—'}</td>
+                      <td className="p-6 text-xs font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{rule.instruction}</td>
                     </tr>
                   ))}
+                  {rules.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="p-10 text-center text-slate-300 font-bold text-sm">אין חוקים מוגדרים במערכת</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -160,13 +170,5 @@ export default function AiSimulator() {
         </div>
       </div>
     </Layout>
-  );
-}
-
-function CheckCheckIcon({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
-      <path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/>
-    </svg>
   );
 }
