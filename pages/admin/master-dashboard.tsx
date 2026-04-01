@@ -104,38 +104,77 @@ useEffect(() => {
     <AppLayout>
       <div className="min-h-screen bg-[#F8F9FA] p-4 lg:p-10 overflow-x-hidden" dir="rtl">
         
-        {/* סידור עבודה נהגים */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-black italic mb-8 flex items-center gap-3 text-slate-800"><Truck className="text-emerald-600" /> סידור עבודה נהגים</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-x-auto pb-4 scrollbar-hide">
-            {truckOrders.map(order => {
-              const timer = calculateTimer(order.order_time);
-              return (
-                <div key={order.id} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 relative group min-w-[300px]">
-                  <div className="flex justify-between items-start mb-6">
-                    <StatusPicker id={order.id} currentStatus={order.status} table="orders" />
-                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{order.driver_name}</span>
-                  </div>
-                  <h3 className="text-2xl font-black tracking-tighter leading-none mb-1">{order.client_info}</h3>
-                  <p className="text-xs font-bold text-slate-400 mb-8 flex items-center gap-1"><MapPin size={12}/> {order.location}</p>
-                  
-                  <div className="flex justify-between items-end pt-4 border-t border-slate-50">
-                    <div className="flex flex-col">
-                      <span className={`text-2xl font-mono font-black ${timer.isPast ? 'text-red-500' : (timer.isUrgent ? 'text-amber-500 animate-pulse' : 'text-slate-900')}`}>
-                        {timer.isPast ? 'באיחור' : timer.text}
-                      </span>
-                      <span className="text-[10px] font-black text-slate-300">יעד: {order.order_time}</span>
-                    </div>
-                    <div className="text-center">
-                       <img src={DRIVERS[order.driver_name] || 'https://ui-avatars.com/api/?name=?'} className="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-500 shadow-md mb-1" />
-                       <span className="text-[9px] font-black text-slate-400 block uppercase">{order.driver_name}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+{/* סידור עבודה נהגים */}
+<section className="mb-16">
+  <h2 className="text-2xl font-black italic mb-8 flex items-center gap-3 text-slate-800">
+    <Truck className="text-emerald-600" /> סידור עבודה נהגים
+  </h2>
+  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-x-auto pb-4 scrollbar-hide">
+    {truckOrders.map(order => {
+      const timer = calculateTimer(order.order_time);
+      // מילון תמונות נהגים מקומי - וודא שזה מוגדר גם מחוץ ל-return
+      const DRIVER_IMAGES: Record<string, string> = {
+        'חכמת': 'https://i.postimg.cc/d3S0NJJZ/Screenshot-20250623-200646-Facebook.jpg',
+        'עלי': 'https://i.postimg.cc/tCNbgXK3/Screenshot-20250623-200744-Tik-Tok.jpg'
+      };
+
+      return (
+        <div key={order.id} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 relative group min-w-[300px]">
+          {/* חלק עליון: סטטוס ושם נהג */}
+          <div className="flex justify-between items-start mb-6">
+            <StatusPicker id={order.id} currentStatus={order.status} table="orders" />
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{order.driver_name}</span>
+              {order.order_number && (
+                <span className="text-[9px] font-mono font-bold text-emerald-600">#{order.order_number}</span>
+              )}
+            </div>
           </div>
-        </section>
+
+          {/* תוכן מרכזי: לקוח ומיקום */}
+          <h3 className="text-2xl font-black tracking-tighter leading-none mb-1">{order.client_info}</h3>
+          <p className="text-xs font-bold text-slate-400 mb-4 flex items-center gap-1">
+            <MapPin size={12}/> {order.location}
+          </p>
+
+          {/* תיוג מחסן */}
+          {order.warehouse && (
+            <div className="mb-8 inline-flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+              <span className="text-[10px] font-black text-slate-500 uppercase">{order.warehouse}</span>
+            </div>
+          )}
+          
+          {/* חלק תחתון: טיימר ותמונת נהג */}
+          <div className="flex justify-between items-end pt-4 border-t border-slate-50">
+            <div className="flex flex-col">
+              <span className={`text-2xl font-mono font-black ${timer.isPast ? 'text-red-500' : (timer.isUrgent ? 'text-amber-500 animate-pulse' : 'text-slate-900')}`}>
+                {timer.isPast ? 'באיחור' : timer.text}
+              </span>
+              <span className="text-[10px] font-black text-slate-300">יעד: {order.order_time}</span>
+            </div>
+
+            <div className="text-center flex flex-col items-center gap-1">
+               <div className="relative">
+                 <img 
+                   src={DRIVER_IMAGES[order.driver_name] || `https://ui-avatars.com/api/?name=${order.driver_name}&background=random`} 
+                   className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-md" 
+                   alt={order.driver_name}
+                 />
+                 {order.status === 'approved' && (
+                   <div className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 border-2 border-white">
+                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                   </div>
+                 )}
+               </div>
+               <span className="text-[9px] font-black text-slate-400 uppercase">{order.driver_name}</span>
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</section>
 
         {/* מכולות והצבות */}
         <section>
