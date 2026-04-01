@@ -15,14 +15,18 @@ export default function AiSimulator() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [matchedRule, setMatchedRule] = useState<any>(null);
   const [aiResponse, setAiResponse] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchRules();
   }, []);
 
   const fetchRules = async () => {
-    const { data } = await supabase.from('ai_rules').select('*').eq('is_active', true);
+    setLoading(true);
+    const { data, error } = await supabase.from('ai_rules').select('*');
+    if (error) console.error("Error fetching rules:", error);
     setRules(data || []);
+    setLoading(false);
   };
 
   const runSimulation = () => {
@@ -31,7 +35,7 @@ export default function AiSimulator() {
     setMatchedRule(null);
     setAiResponse('');
 
-    // סימולציה של מנוע החוקים
+    // מנגנון זיהוי חוקים משופר
     setTimeout(() => {
       const found = rules.find(r => 
         query.includes(r.action_type) || 
@@ -40,127 +44,122 @@ export default function AiSimulator() {
 
       if (found) {
         setMatchedRule(found);
-        setAiResponse(`זיהיתי חוק פעיל: "${found.instruction}". אני עוצר את הפעולה ומבקש אישור מנהל או דורש מסמכים נוספים.`);
+        setAiResponse(`⚠️ חוק הופעל: "${found.instruction}"`);
       } else {
-        setAiResponse("לא נמצאו חוקים מגבילים. הפעולה תבוצע ותוזרק ל-DB באופן אוטומטי.");
+        setAiResponse("✅ אין חוקים מגבילים. הפעולה מאושרת להזרקה.");
       }
       setIsSimulating(false);
-    }, 1200);
+    }, 800);
   };
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#F8F9FA] pb-20" dir="rtl">
-        <Head>
-          <title>SABAN OS | AI Simulator</title>
-        </Head>
+      <Head>
+        <title>SABAN OS | AI Simulator</title>
+      </Head>
 
-        {/* Header - PWA Style */}
-        <div className="bg-white border-b border-slate-200 p-6 pt-10">
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col overflow-y-auto pb-20" dir="rtl">
+        
+        {/* Header פנימי קבוע */}
+        <div className="bg-white border-b border-slate-200 p-6 sticky top-0 z-30 shadow-sm">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2 italic">
-                <Cpu className="text-emerald-600" size={28} /> סימולטור חוקי מוח
+                <Cpu className="text-emerald-600" size={28} /> סימולטור SABAN AI
               </h1>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">בדיקת לוגיקה בזמן אמת</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">בדיקת חוקים וסנכרון DB</p>
             </div>
-            <div className="flex gap-2 items-center">
-               <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Engine Live</span>
-            </div>
+            <button onClick={fetchRules} className="p-2 hover:bg-slate-100 rounded-full transition-all">
+               <RefreshCw size={18} className={`text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto p-4 space-y-6 mt-6">
+        <div className="max-w-4xl mx-auto w-full p-4 space-y-6 mt-4">
           
-          {/* אזור הקלט - כהה ויוקרתי */}
-          <section className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl text-white border-b-4 border-emerald-500">
-            <label className="text-[11px] font-black text-emerald-400 uppercase mb-4 block tracking-[0.2em]">הזן שאילתה לבדיקת חוקים</label>
-            <div className="flex gap-3">
-              <input 
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="למשל: 'תוסיף הובלה ללקוח חדש'..."
-                className="flex-1 bg-white/10 border border-white/10 rounded-2xl p-4 text-white font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-500"
-              />
-              <button 
-                onClick={runSimulation}
-                disabled={isSimulating}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 rounded-2xl font-black flex items-center gap-2 transition-all disabled:opacity-50 active:scale-95 shadow-lg"
-              >
-                {isSimulating ? <RefreshCw className="animate-spin" /> : <Play fill="currentColor" size={18} />}
-              </button>
+          {/* אזור הקלט */}
+          <section className="bg-slate-900 rounded-[2rem] p-6 shadow-2xl border-b-4 border-emerald-500">
+            <div className="flex flex-col gap-4">
+              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">מה הפקודה ששלח איש הצוות?</label>
+              <div className="flex gap-2">
+                <input 
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="הקלד כאן פקודה לסימולציה..."
+                  className="flex-1 bg-white/10 border border-white/10 rounded-xl p-4 text-white font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <button 
+                  onClick={runSimulation}
+                  disabled={isSimulating || loading}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 rounded-xl font-black transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isSimulating ? <RefreshCw className="animate-spin" /> : <Play fill="currentColor" size={20} />}
+                </button>
+              </div>
             </div>
           </section>
 
-          {/* לוח התוצאות */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* סטטוס המנוע */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between h-48">
-              <div className="flex justify-between">
-                <Terminal className="text-slate-400" size={24} />
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">System Log</span>
+          {/* לוח סטטוס מהיר */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100">
+              <div className="flex justify-between items-start mb-4 text-slate-400">
+                <Terminal size={20} />
+                <span className="text-[9px] font-black uppercase">Engine Status</span>
               </div>
-              <div className="mt-4">
-                {isSimulating ? (
-                  <p className="text-sm font-bold text-emerald-600 animate-pulse">סורק טבלת ai_rules...</p>
-                ) : matchedRule ? (
-                  <p className="text-sm font-bold text-red-500 flex items-center gap-2">
-                    <AlertCircle size={16} /> נמצאה התאמה לחוק #{matchedRule.id.slice(0,4)}
-                  </p>
-                ) : (
-                  <p className="text-sm font-bold text-slate-400">ממתין לפקודה...</p>
-                )}
-              </div>
-              <div className="flex gap-1 mt-4">
-                <div className={`h-1 flex-1 rounded-full ${isSimulating ? 'bg-emerald-500' : 'bg-slate-100'}`}></div>
-                <div className={`h-1 flex-1 rounded-full ${matchedRule ? 'bg-amber-500' : 'bg-slate-100'}`}></div>
-                <div className={`h-1 flex-1 rounded-full ${aiResponse ? 'bg-emerald-500' : 'bg-slate-100'}`}></div>
+              <div className="h-12 flex items-center">
+                 {isSimulating ? (
+                   <span className="text-emerald-600 font-bold animate-pulse italic">מנתח חוקים...</span>
+                 ) : matchedRule ? (
+                   <span className="text-red-500 font-bold flex items-center gap-2"><AlertCircle size={16}/> חסימה פעילה</span>
+                 ) : (
+                   <span className="text-slate-400 font-bold italic">ממתין לפעולה</span>
+                 )}
               </div>
             </div>
 
-            {/* תגובת ה-AI המשוערת */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col h-48">
-              <div className="flex justify-between mb-4">
-                <MessageSquare className="text-emerald-500" size={24} />
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">AI Output</span>
+            <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100">
+              <div className="flex justify-between items-start mb-4 text-emerald-500">
+                <MessageSquare size={20} />
+                <span className="text-[9px] font-black uppercase text-slate-400">AI Logic</span>
               </div>
-              <p className="text-sm font-black text-slate-700 leading-relaxed italic">
-                {aiResponse || "הזן שאילתה כדי לראות איך המוח יגיב לצוות בשטח..."}
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic truncate">
+                {aiResponse || "כאן תופיע תגובת המערכת..."}
               </p>
             </div>
           </div>
 
-          {/* טבלת חוקים פעילים - שליפה מהירה */}
-          <section className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="font-black text-slate-800 flex items-center gap-2 italic">
-                <Database size={18} className="text-slate-400" /> מאגר חוקים נוכחי
+          {/* טבלת חוקים - גלילה עצמאית */}
+          <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="font-black text-slate-800 flex items-center gap-2 italic text-sm">
+                <Database size={16} className="text-slate-400" /> חוקים קיימים במאגר
               </h2>
-              <span className="text-[10px] font-black bg-white px-3 py-1 rounded-full border border-slate-200 text-slate-500 shadow-sm">{rules.length} חוקים פעילים</span>
+              <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full uppercase italic">
+                {rules.length} חוקים פעילים
+              </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-right">
-                <thead>
-                  <tr className="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                    <th className="p-6">פעולה</th>
-                    <th className="p-6">תנאי</th>
-                    <th className="p-6 text-emerald-600">הנחיית המוח</th>
+            
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <table className="w-full text-right border-collapse">
+                <thead className="sticky top-0 bg-white z-10 shadow-sm">
+                  <tr className="text-[10px] font-black text-slate-400 uppercase">
+                    <th className="p-4 border-b">פעולה</th>
+                    <th className="p-4 border-b">תנאי</th>
+                    <th className="p-4 border-b">הוראת ביצוע</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {rules.map(rule => (
-                    <tr key={rule.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="p-6 text-xs font-black text-slate-900 uppercase">{rule.action_type}</td>
-                      <td className="p-6 text-xs font-bold text-slate-500">{rule.condition || '—'}</td>
-                      <td className="p-6 text-xs font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{rule.instruction}</td>
+                  {loading ? (
+                    <tr><td colSpan={3} className="p-10 text-center animate-pulse font-bold text-slate-300">טוען נתונים מהמאגר...</td></tr>
+                  ) : rules.map(rule => (
+                    <tr key={rule.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="p-4 text-[11px] font-black text-slate-900 uppercase">{rule.action_type}</td>
+                      <td className="p-4 text-[11px] font-bold text-slate-500 italic">{rule.condition || 'כללי'}</td>
+                      <td className="p-4 text-[11px] font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{rule.instruction}</td>
                     </tr>
                   ))}
-                  {rules.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="p-10 text-center text-slate-300 font-bold text-sm">אין חוקים מוגדרים במערכת</td>
-                    </tr>
+                  {!loading && rules.length === 0 && (
+                    <tr><td colSpan={3} className="p-10 text-center text-slate-300 font-bold">לא נמצאו חוקים. וודא שהגדרת אותם ב-Database.</td></tr>
                   )}
                 </tbody>
               </table>
