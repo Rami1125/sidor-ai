@@ -59,7 +59,12 @@ export default function SabanGroupChat() {
   };
 
   const fetchMessages = async () => {
-    const { data } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+    // וודא ששם הטבלה ב-Supabase הוא chat_messages
+    const { data, error } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+    if (error) {
+      console.error("Supabase Error:", error);
+      return;
+    }
     setMessages(data || []);
   };
 
@@ -106,12 +111,13 @@ export default function SabanGroupChat() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-64px)] w-full bg-[#E5DDD5] overflow-hidden relative" dir="rtl">
-        <Head>
-          <title>SABAN OS | Group Chat</title>
-        </Head>
+      <Head>
+        <title>SABAN OS | Group Chat</title>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+      </Head>
 
-        {/* Sidebar Overlay */}
+      <div className="flex h-[calc(100vh-64px)] w-full bg-[#E5DDD5] overflow-hidden relative" dir="rtl">
         <AnimatePresence>
           {isSidebarOpen && (
             <>
@@ -143,7 +149,6 @@ export default function SabanGroupChat() {
           )}
         </AnimatePresence>
 
-        {/* Chat Main */}
         <div className="flex-1 flex flex-col h-full bg-[#E5DDD5] relative">
           <header className="h-16 bg-[#F0F2F5] border-b border-gray-300 flex items-center justify-between px-4 shrink-0 z-10 shadow-sm">
             <div className="flex items-center gap-3">
@@ -153,7 +158,7 @@ export default function SabanGroupChat() {
               <div className="w-10 h-10 bg-[#00a884] rounded-full flex items-center justify-center text-white font-black shadow-md border-2 border-white text-xl italic">S</div>
               <div>
                 <h2 className="text-sm font-black text-[#111B21] leading-none uppercase tracking-tight">Saban Command</h2>
-                <p className="text-[10px] text-emerald-600 font-bold mt-1">AI פעיל ומנטר...</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-1">AI פעיל...</p>
               </div>
             </div>
             <div className="flex gap-4 text-gray-500 items-center">
@@ -197,13 +202,12 @@ export default function SabanGroupChat() {
             )}
           </div>
 
-          {/* Input Area */}
           <div className="absolute bottom-0 left-0 right-0 p-3 bg-[#F0F2F5] border-t border-gray-300">
             <form onSubmit={sendMessage} className="max-w-4xl mx-auto flex items-center gap-3">
               <Paperclip size={24} className="text-gray-500 cursor-pointer hidden sm:block" />
               <input 
                 value={input} onChange={(e) => setInput(e.target.value)}
-                placeholder="כתוב פקודה לצוות או למוח..."
+                placeholder="כתוב פקודה..."
                 className="flex-1 bg-white p-4 rounded-2xl outline-none text-sm shadow-inner font-black border border-slate-200"
               />
               <button type="submit" className="bg-[#00a884] text-white p-4 rounded-2xl shadow-xl active:scale-95 transition-all">
@@ -217,7 +221,6 @@ export default function SabanGroupChat() {
   );
 }
 
-// פונקציית עזר לאייקון
 function CheckCheckIcon({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
