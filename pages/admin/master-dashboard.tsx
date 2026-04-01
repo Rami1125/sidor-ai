@@ -19,7 +19,6 @@ export default function MasterDashboard() {
   const [activeTab, setActiveTab] = useState<'live' | 'containers' | 'chat'>('live');
   const [truckOrders, setTruckOrders] = useState<any[]>([]);
   const [containerSites, setContainerSites] = useState<any[]>([]);
-  const [transfers, setTransfers] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,7 +32,7 @@ export default function MasterDashboard() {
     const t = setInterval(() => setNow(new Date()), 1000);
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     
-    const channel = supabase.channel('master_sync_v3')
+    const channel = supabase.channel('master_sync_v4')
       .on('postgres_changes', { event: '*', schema: 'public' }, fetchData)
       .subscribe();
       
@@ -44,10 +43,8 @@ export default function MasterDashboard() {
     const today = new Date().toISOString().split('T')[0];
     const { data: o } = await supabase.from('orders').select('*').eq('delivery_date', today);
     const { data: c } = await supabase.from('container_management').select('*').eq('is_active', true);
-    const { data: tr } = await supabase.from('transfers').select('*').eq('transfer_date', today);
     setTruckOrders(o || []);
     setContainerSites(c || []);
-    setTransfers(tr || []);
   };
 
   const navigateToChat = (query: string) => {
@@ -100,12 +97,10 @@ export default function MasterDashboard() {
       <div className="flex h-full bg-[#F0F2F5] overflow-hidden" dir="rtl">
         <Head><title>SABAN OS | MASTER</title></Head>
 
-        {/* דוח צדדי לחיץ - משודרג עם נהגים ומחסני מכולות */}
+        {/* דוח צדדי לחיץ */}
         <aside className="hidden xl:flex w-80 flex-col bg-white border-l border-slate-200 shadow-xl overflow-y-auto">
           <div className="p-8 pb-4 font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">סיכום תפעולי (לחיץ)</div>
           <div className="p-4 space-y-4">
-            
-            {/* נהגים חכמת ועלי */}
             <div className="space-y-2">
               <p className="text-[10px] font-black text-slate-400 mb-2 mr-2">נהגים</p>
               {DRIVERS.map(d => (
@@ -120,8 +115,6 @@ export default function MasterDashboard() {
                 </button>
               ))}
             </div>
-
-            {/* קבלני מכולות */}
             <div className="space-y-2">
               <p className="text-[10px] font-black text-slate-400 mb-2 mr-2">מחסן מכולות</p>
               {['שארק 30', 'כראדי 32', 'שי שרון 40'].map((con, idx) => (
@@ -136,22 +129,14 @@ export default function MasterDashboard() {
                 </button>
               ))}
             </div>
-
-            {/* העברות */}
-            <button onClick={() => navigateToChat(`מה מצב העברות בין סניפים היום?`)} className="w-full flex items-center justify-between p-4 bg-slate-900 text-white rounded-[2rem] hover:bg-emerald-600 transition-all shadow-xl mt-4">
-                <div className="flex items-center gap-3 font-black italic"><ArrowRightLeft size={16}/><span className="text-xs">העברות סניפים</span></div>
-                <span className="text-[10px] font-black opacity-60">{transfers.length}</span>
-            </button>
           </div>
         </aside>
 
-        {/* תוכן ראשי */}
+        {/* תוכן ראשי - התווספה סגירת main תקינה */}
         <main className="flex-1 overflow-y-auto p-6 lg:p-10 scrollbar-hide pb-32">
           <AnimatePresence mode="wait">
             {activeTab === 'live' && (
               <div className="space-y-12">
-                
-                {/* סקציה 1: הזמנות חומרי בניין */}
                 <section>
                   <div className="flex items-center gap-3 mb-6">
                     <Truck className="text-emerald-600" size={24} />
@@ -162,29 +147,14 @@ export default function MasterDashboard() {
                       const timer = calculateProgress(order.delivery_date, order.order_time);
                       return (
                         <div key={order.id} className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 relative overflow-hidden group">
-                          <div className="flex justify-between mb-4">
-                            <span className="bg-slate-900 text-emerald-500 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">ORDER</span>
-                            <span className="text-xs font-mono font-black text-slate-300">#{order.id.slice(0,5)}</span>
-                          </div>
                           <h3 className="text-2xl font-black mb-1 tracking-tighter leading-none">{order.client_info}</h3>
                           <p className="text-xs font-bold text-slate-400 mb-6 flex items-center gap-1"><MapPin size={12}/> {order.location}</p>
-                          
-                          <div className="space-y-3 mb-6">
-                             <div className="flex justify-between items-end font-black">
-                                <span className={`text-3xl font-mono ${timer.expired ? 'text-red-500 animate-pulse' : 'text-slate-800'}`}>
-                                   {timer.expired ? 'בביצוע' : `${timer.h}:${String(timer.m).padStart(2,'0')}:${String(timer.s).padStart(2,'0')}`}
-                                </span>
-                                <span className="text-[10px] text-slate-400 uppercase tracking-widest">יעד: {order.order_time}</span>
-                             </div>
-                             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${timer.progress}%` }} className={`h-full ${timer.expired ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                             </div>
+                          <div className="space-y-3 mb-6 text-2xl font-black font-mono">
+                             {timer.expired ? 'בביצוע' : `${timer.h}:${String(timer.m).padStart(2,'0')}:${String(timer.s).padStart(2,'0')}`}
                           </div>
-
                           <div className="mt-4 flex items-center gap-3 border-t border-slate-50 pt-4">
-                            <img src={DRIVERS.find(d => d.name === order.driver_name)?.img || 'https://i.postimg.cc/mD8zQcby/rami.jpg'} className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-sm" />
+                            <img src={DRIVERS.find(d => d.name === order.driver_name)?.img || ''} className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-sm" />
                             <span className="text-base font-black">{order.driver_name}</span>
-                            <div className="mr-auto text-emerald-500 opacity-20 group-hover:opacity-100"><CheckCheck size={20}/></div>
                           </div>
                         </div>
                       );
@@ -192,7 +162,6 @@ export default function MasterDashboard() {
                   </div>
                 </section>
 
-                {/* סקציה 2: מכולות פתוחות */}
                 <section>
                   <div className="flex items-center gap-3 mb-6 border-t border-slate-200 pt-12">
                     <Box className="text-blue-600" size={24} />
@@ -202,27 +171,9 @@ export default function MasterDashboard() {
                     {containerSites.map(site => {
                       const days = calculateProgress(site.start_date, '08:00', true);
                       return (
-                        <div key={site.id} className={`bg-white p-6 rounded-[2.5rem] shadow-xl border-2 transition-all ${days.isUrgent ? 'border-red-500 animate-pulse' : 'border-slate-50'}`}>
-                          <div className="flex justify-between mb-4">
-                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase text-white ${days.isUrgent ? 'bg-red-500' : 'bg-blue-600'}`}>
-                              {site.action_type || 'מכולה'}
-                            </span>
-                          </div>
+                        <div key={site.id} className={`bg-white p-6 rounded-[2.5rem] shadow-xl border-2 ${days.isUrgent ? 'border-red-500 animate-pulse' : 'border-slate-50'}`}>
                           <h3 className="text-2xl font-black mb-1 tracking-tighter leading-none">{site.client_name}</h3>
-                          <p className="text-xs font-bold text-slate-400 mb-6 flex items-center gap-1"><MapPin size={12}/> {site.delivery_address}</p>
-                          
-                          <div className="space-y-3 mb-6">
-                             <div className="flex justify-between items-end font-black">
-                                <span className={`text-xl font-mono ${days.isUrgent ? 'text-red-500' : 'text-slate-800'}`}>{days.days} / 10 ימים</span>
-                                <span className="text-[10px] text-slate-400 uppercase tracking-widest">{days.isUrgent ? 'נא לפנות' : 'זמן בשטח'}</span>
-                             </div>
-                             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((days.days/10)*100, 100)}%` }} className={`h-full ${days.isUrgent ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                             </div>
-                          </div>
-                          <div className="text-[11px] font-black text-slate-700 uppercase flex items-center gap-2">
-                            <Warehouse size={14} className="text-slate-400" /> {site.contractor_name}
-                          </div>
+                          <div className="text-xl font-mono font-black mt-4">{days.days} / 10 ימים</div>
                         </div>
                       );
                     })}
@@ -231,28 +182,28 @@ export default function MasterDashboard() {
               </div>
             )}
 
-            {/* חדר צ'אט (מנוהל מהדוח) */}
             {activeTab === 'chat' && (
-              <motion.div key="chat" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 max-w-5xl mx-auto">
-                <div className="p-5 bg-slate-900 text-emerald-500 border-b border-white/5 flex items-center gap-3">
-                  <Bot size={22} className="animate-pulse" />
-                  <span className="font-black text-sm uppercase tracking-widest italic">SABAN OS AI Supervisor</span>
-                </div>
+              <div className="h-full flex flex-col bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 max-w-5xl mx-auto">
                 <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
                   {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`max-w-[85%] p-5 rounded-[2.2rem] text-sm font-bold shadow-sm ${m.role === 'user' ? 'bg-slate-100 text-slate-800 rounded-tr-none' : 'bg-emerald-600 text-white rounded-tl-none'}`}>{m.content}</div>
+                      <div className={`max-w-[85%] p-5 rounded-[2.2rem] text-sm font-bold shadow-sm ${m.role === 'user' ? 'bg-slate-100' : 'bg-emerald-600 text-white'}`}>{m.content}</div>
                     </div>
                   ))}
-                  {loading && <div className="text-[10px] font-black text-emerald-500 animate-pulse uppercase tracking-widest italic">המוח מנתח...</div>}
                 </div>
                 <form onSubmit={handleChatCommand} className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
                    <input value={input} onChange={e => setInput(e.target.value)} placeholder="הקלד פקודה למוח..." className="flex-1 p-4 bg-white rounded-2xl border border-slate-200 outline-none text-sm font-bold shadow-inner" />
-                   <button type="submit" className="bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-xl active:scale-90 transition-all flex items-center justify-center"><Send size={20} className="rotate-180"/></button>
+                   <button type="submit" className="bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center"><Send size={20} className="rotate-180"/></button>
                 </form>
-              </motion.div>
+              </div>
             )}
           </AnimatePresence>
+        </main> {/* כאן התווספה התגית הסוגרת שחסרה */}
+
+        {/* Mobile Bottom Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t flex items-center justify-around z-[100]">
+           <button onClick={() => setActiveTab('live')} className={activeTab === 'live' ? 'text-emerald-600' : 'text-slate-400'}><Activity size={24}/></button>
+           <button onClick={() => setActiveTab('chat')} className={activeTab === 'chat' ? 'text-emerald-600' : 'text-slate-400'}><Bot size={24}/></button>
         </div>
       </div>
     </AppLayout>
