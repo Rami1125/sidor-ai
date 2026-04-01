@@ -134,7 +134,16 @@ export default function SabanUltimateControlCenter() {
           </div>
         </div>
       </aside>
-
+           ))}
+            <button onClick={() => navigateToChat(`מי הן 2 ההזמנות של שי שרון 40?`)} className="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 hover:border-emerald-500 transition-all">
+               <span className="text-xs font-bold text-slate-700">שי שרון 40</span>
+               <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-black">
+                 {containerSites.filter(c => c.contractor_name === 'שארק 30').length} מכולות
+               </span>
+            </button>
+          </div>
+        </div>
+      </aside>
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="h-20 flex items-center justify-between px-8 bg-white/80 backdrop-blur-md border-b border-slate-200">
            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="p-2 rounded-xl font-black text-xs border border-slate-200 outline-none" />
