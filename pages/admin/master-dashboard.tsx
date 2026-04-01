@@ -96,7 +96,7 @@ export default function MasterDashboard() {
         }`}
       >
         {currentStatus === 'approved' ? 'מאושר' : 'ממתין'}
-        <ChevronDown size={12} />
+        <ChevronDown size={15} />
       </button>
       <AnimatePresence>
         {openStatusId === id && (
@@ -104,7 +104,7 @@ export default function MasterDashboard() {
             className="absolute left-0 mt-2 w-36 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
           >
             {[
-              { label: 'ממתין', val: 'pending', icon: <Clock size={12}/>, color: 'text-amber-600' },
+              { label: 'ממתין', val: 'pending', icon: <Clock size={12}/>, color: 'text-amber-900' },
               { label: 'מאושר', val: 'approved', icon: <CheckCircle2 size={12}/>, color: 'text-emerald-600' },
               { label: 'היסטוריה', val: 'history', icon: <Archive size={12}/>, color: 'text-slate-400' }
             ].map(s => (
@@ -141,7 +141,7 @@ export default function MasterDashboard() {
               return (
                 <div key={order.id} className={`bg-white p-7 rounded-[2.5rem] shadow-xl border relative transition-all min-w-[320px] ${timer.isUrgent ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-100'}`}>
                   {timer.isUrgent && (
-                    <div className="absolute top-6 left-6 flex items-center gap-1.5 bg-amber-500 text-white text-[9px] font-black px-3 py-1 rounded-full animate-pulse uppercase">
+                    <div className="absolute top-6 left-6 flex items-center gap-1.5 bg-amber-500 text-white text-[9px] font-black px-4 py-1 rounded-full animate-pulse uppercase">
                       <AlertTriangle size={11} /> דחוף (שעה)
                     </div>
                   )}
