@@ -5,207 +5,203 @@ import Layout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
 import { 
   Cpu, Send, ShieldAlert, CheckCircle2, 
-  Terminal, BarChart3, Info, Zap, Search, HelpCircle
+  Terminal, BarChart3, Edit3, Trash2, Zap, 
+  Play, RefreshCw, Type, Brain, SkipForward, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function AiStudioSimulator() {
+export default function SabanAiStudio() {
   const [rules, setRules] = useState<any[]>([]);
   const [query, setQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
-  const [accuracy, setAccuracy] = useState(0);
+  const [editingRule, setEditingRule] = useState<any>(null);
+  const [effect, setEffect] = useState<'type' | 'think' | 'skip'>('type');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchRules();
-  }, []);
+  useEffect(() => { fetchRules(); }, []);
 
   const fetchRules = async () => {
-    const { data } = await supabase.from('ai_rules').select('*').eq('is_active', true);
+    const { data } = await supabase.from('ai_rules').select('*').order('created_at', { ascending: false });
     setRules(data || []);
   };
 
-  const runAdvancedSimulation = () => {
+  const handleSimulate = () => {
     if (!query.trim()) return;
     setIsProcessing(true);
     setSimulationResult(null);
 
-    // דימוי חשיבה של המוח
+    const delay = effect === 'think' ? 3000 : (effect === 'skip' ? 400 : 1200);
+
     setTimeout(() => {
-      const matched = rules.find(r => 
-        query.includes(r.action_type) || (r.condition && query.includes(r.condition))
-      );
-
-      const score = matched ? 98 : 85; // מדד דיוק משוער
-      setAccuracy(score);
-
+      const matched = rules.find(r => query.includes(r.action_type) || (r.condition && query.includes(r.condition)));
       setSimulationResult({
         matched: !!matched,
-        rule: matched,
-        response: matched 
-          ? matched.instruction 
-          : "✅ הפקודה תקינה. המוח יזריק נתונים לטבלת " + (query.includes('מכולה') ? 'containers' : 'orders') + ".",
-        suggestion: matched 
-          ? "נסה לנסח שוב ללא המגבלה או הוסף אישור מנהל." 
-          : "נוסח פקודה אופטימלי: '[פעולה] [לקוח] [זמן/מיקום]'"
+        response: matched ? matched.instruction : "הפקודה אושרה. מזריק נתונים למערכת...",
+        accuracy: matched ? 99 : 82
       });
       setIsProcessing(false);
-    }, 1500);
+    }, delay);
+  };
+
+  const deleteRule = async (id: string) => {
+    if (!confirm('למחוק את החוק מהמוח?')) return;
+    await supabase.from('ai_rules').delete().eq('id', id);
+    fetchRules();
+  };
+
+  const updateRule = async () => {
+    await supabase.from('ai_rules').update({
+      action_type: editingRule.action_type,
+      instruction: editingRule.instruction
+    }).eq('id', editingRule.id);
+    setEditingRule(null);
+    fetchRules();
   };
 
   return (
     <Layout>
-      <Head>
-        <title>SABAN AI | Studio Simulator</title>
-      </Head>
+      <div className="min-h-screen bg-[#F1F5F9] text-slate-900 font-sans" dir="rtl">
+        <Head><title>SABAN AI | Pro Studio</title></Head>
 
-      <div className="min-h-screen bg-[#0F172A] text-slate-200 font-sans p-4 lg:p-8" dir="rtl">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Side Panel: Metrics & Rules */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Accuracy Card */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-[2rem] p-6 backdrop-blur-xl">
-              <div className="flex justify-between items-center mb-4">
-                <BarChart3 className="text-emerald-400" size={24} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">System Metrics</span>
+        {/* Header פרימיום */}
+        <header className="bg-white border-b border-slate-200 p-6 sticky top-0 z-40 shadow-sm">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
+                <Cpu className="text-emerald-400" size={24} />
               </div>
-              <div className="flex items-end gap-2">
-                <span className="text-5xl font-black text-white">{accuracy}%</span>
-                <span className="text-emerald-400 font-bold text-sm mb-2">דיוק חיזוי</span>
-              </div>
-              <div className="w-full bg-slate-700 h-1.5 rounded-full mt-4 overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }} animate={{ width: `${accuracy}%` }}
-                  className="h-full bg-emerald-500 shadow-[0_0_10px_#10b981]" 
-                />
+              <div>
+                <h1 className="text-xl font-black italic tracking-tighter">SABAN <span className="text-emerald-600">STUDIO</span></h1>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AI Rule Engine v2.0</p>
               </div>
             </div>
+            
+            {/* בורר אפקטים */}
+            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+              {[
+                { id: 'type', icon: Type, label: 'כתיבה' },
+                { id: 'think', icon: Brain, label: 'חשיבה' },
+                { id: 'skip', icon: SkipForward, label: 'דילוג' }
+              ].map(eff => (
+                <button 
+                  key={eff.id} onClick={() => setEffect(eff.id as any)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${effect === eff.id ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400'}`}
+                >
+                  <eff.icon size={14} /> {eff.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </header>
 
-            {/* Compact Rules Table */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-[2rem] overflow-hidden backdrop-blur-xl">
-              <div className="p-5 border-b border-slate-700 flex justify-between items-center">
-                <h3 className="font-black text-sm flex items-center gap-2 italic">
-                  <Terminal size={18} className="text-slate-500" /> תמצית חוקי מוח
-                </h3>
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full border border-emerald-500/20">{rules.length} חוקים</span>
+        <main className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* צד ימין: ניהול חוקים */}
+          <div className="lg:col-span-5 space-y-6">
+            <section className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <h3 className="text-sm font-black flex items-center gap-2 italic"><Terminal size={18} /> מאגר חוקים פעיל</h3>
+                <Zap size={16} className="text-emerald-400 animate-pulse" />
               </div>
-              <div className="max-h-[400px] overflow-y-auto">
-                <table className="w-full text-[11px] text-right">
-                  <tbody className="divide-y divide-slate-700">
+              <div className="max-h-[600px] overflow-y-auto">
+                <table className="w-full text-right border-collapse">
+                  <tbody className="divide-y divide-slate-100">
                     {rules.map(r => (
-                      <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                        <td className="p-3 font-black text-emerald-500 w-20">{r.action_type}</td>
-                        <td className="p-3 text-slate-400 italic">{r.instruction.slice(0, 40)}...</td>
+                      <tr key={r.id} className="group hover:bg-slate-50 transition-all">
+                        <td className="p-4">
+                          <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase">{r.action_type}</span>
+                          <p className="text-xs font-bold text-slate-700 mt-1">{r.instruction}</p>
+                        </td>
+                        <td className="p-4 flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => setEditingRule(r)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit3 size={16} /></button>
+                          <button onClick={() => deleteRule(r.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </section>
           </div>
 
-          {/* Main Content: Chat Simulator */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[650px] relative">
-              
-              {/* Chat Header */}
-              <header className="p-6 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-900/20">
-                    <Cpu className="text-white" size={20} />
-                  </div>
-                  <div>
-                    <h2 className="font-black text-white leading-none italic">SABAN AI STUDIO</h2>
-                    <p className="text-[10px] text-emerald-400 font-bold uppercase mt-1 tracking-widest animate-pulse">Simulator Active</p>
-                  </div>
-                </div>
-                <Zap className="text-slate-600" size={20} />
-              </header>
-
-              {/* Chat Messages Area */}
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+          {/* צד שמאל: סימולטור צ'אט */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px] relative">
+              <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-slate-50/50">
                 <AnimatePresence>
-                  {query && !isProcessing && simulationResult && (
+                  {simulationResult && !isProcessing && (
                     <>
-                      {/* User Bubble */}
-                      <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex justify-start">
-                        <div className="bg-slate-700 text-white p-4 rounded-2xl rounded-tr-none max-w-[80%] font-bold shadow-lg border border-slate-600">
-                          {query}
-                        </div>
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
+                        <div className="bg-slate-900 text-white p-4 rounded-2xl rounded-tr-none max-w-[80%] font-bold shadow-lg">{query}</div>
                       </motion.div>
-
-                      {/* AI Response Bubble */}
-                      <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex justify-end">
-                        <div className={`p-5 rounded-2xl rounded-tl-none max-w-[85%] shadow-2xl border-2 ${
-                          simulationResult.matched ? 'bg-red-950/40 border-red-500 text-red-100' : 'bg-emerald-950/40 border-emerald-500 text-emerald-100'
-                        }`}>
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-end">
+                        <div className={`p-5 rounded-2xl rounded-tl-none max-w-[85%] shadow-xl border-2 ${simulationResult.matched ? 'bg-red-50 border-red-200 text-red-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
                           <div className="flex items-center gap-2 mb-2">
-                            {simulationResult.matched ? <ShieldAlert size={18} /> : <CheckCircle2 size={18} />}
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                              {simulationResult.matched ? 'Rule Triggered' : 'Action Approved'}
-                            </span>
+                            {simulationResult.matched ? <ShieldAlert size={18} className="text-red-600" /> : <CheckCircle2 size={18} className="text-emerald-600" />}
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">AI Verdict</span>
                           </div>
-                          <p className="text-sm font-black leading-relaxed">{simulationResult.response}</p>
-                          
-                          {/* עזרה בצורת נוסח פקודה */}
-                          <div className="mt-4 pt-3 border-t border-white/10 flex items-start gap-2">
-                            <HelpCircle size={14} className="mt-1 opacity-50" />
-                            <div>
-                              <p className="text-[10px] font-bold opacity-50 uppercase mb-1">טיפ לניסוח פקודה:</p>
-                              <p className="text-[11px] font-medium bg-black/30 p-2 rounded-lg italic text-blue-300">{simulationResult.suggestion}</p>
-                            </div>
-                          </div>
+                          <p className="text-sm font-black leading-relaxed">
+                            {effect === 'type' ? (
+                              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>{simulationResult.response}</motion.span>
+                            ) : simulationResult.response}
+                          </p>
                         </div>
                       </motion.div>
                     </>
                   )}
-                </AnimatePresence>
-                
-                {isProcessing && (
-                  <div className="flex justify-center py-10">
-                    <div className="flex flex-col items-center gap-4">
-                      <RefreshCw className="text-emerald-500 animate-spin" size={32} />
-                      <span className="text-xs font-black text-emerald-500/50 animate-pulse tracking-widest uppercase">Analyzing Logic...</span>
+                  {isProcessing && (
+                    <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-300">
+                      <RefreshCw className="animate-spin" size={32} />
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em]">Processing Logic</span>
                     </div>
-                  </div>
-                )}
+                  )}
+                </AnimatePresence>
               </div>
 
-              {/* Chat Input Area */}
-              <div className="p-4 bg-slate-800/80 border-t border-slate-700">
-                <div className="max-w-3xl mx-auto flex gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input 
-                      value={query} onChange={(e) => setQuery(e.target.value)}
-                      placeholder="הזן פקודה לבדיקה (למשל: תמחק הזמנה)"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-2xl p-4 pl-12 text-white font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-inner"
-                    />
-                  </div>
-                  <button 
-                    onClick={runAdvancedSimulation}
-                    disabled={isProcessing}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 rounded-2xl font-black shadow-lg shadow-emerald-900/40 active:scale-95 transition-all"
-                  >
-                    <Send size={20} className="rotate-180" />
+              {/* אזור קלט פרימיום */}
+              <div className="p-6 bg-white border-t border-slate-100 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+                <div className="flex gap-3">
+                  <input 
+                    value={query} onChange={(e) => setQuery(e.target.value)}
+                    placeholder="הזן פקודה (למשל: תמחק מכולה)..."
+                    className="flex-1 bg-slate-50 border-none rounded-2xl p-4 font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-inner"
+                  />
+                  <button onClick={handleSimulate} disabled={isProcessing} className="bg-slate-900 text-white px-8 rounded-2xl font-black flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95">
+                    <Play size={18} fill="currentColor" />
                   </button>
                 </div>
               </div>
             </div>
           </div>
+        </main>
 
-        </div>
+        {/* Modal עריכה */}
+        <AnimatePresence>
+          {editingRule && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingRule(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 relative z-10 shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-black italic">עריכת חוק מוח</h3>
+                  <button onClick={() => setEditingRule(null)}><X /></button>
+                </div>
+                <div className="space-y-4">
+                  <input 
+                    className="w-full bg-slate-50 p-4 rounded-xl border-none font-bold"
+                    value={editingRule.action_type} onChange={(e) => setEditingRule({...editingRule, action_type: e.target.value})}
+                  />
+                  <textarea 
+                    className="w-full bg-slate-50 p-4 rounded-xl border-none font-bold h-32"
+                    value={editingRule.instruction} onChange={(e) => setEditingRule({...editingRule, instruction: e.target.value})}
+                  />
+                  <button onClick={updateRule} className="w-full bg-emerald-600 text-white p-4 rounded-xl font-black shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all">שמור שינויים</button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </Layout>
-  );
-}
-
-function RefreshCw({ className, size }: { className?: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/>
-    </svg>
   );
 }
