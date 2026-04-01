@@ -1,4 +1,4 @@
-pages/chat.tsx'use client';
+'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/Layout';
 import { supabase } from '../lib/supabase';
