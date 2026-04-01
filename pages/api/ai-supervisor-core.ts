@@ -3,86 +3,83 @@ import { supabase } from '../../lib/supabase';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ reply: "בוס, רק POST עובד כאן." });
+  if (req.method !== 'POST') return res.status(405).json({ reply: "רק POST, בוס." });
 
   const { query, sender_name } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
   const today = new Date().toISOString().split('T')[0];
-  
-  if (!apiKey) return res.status(200).json({ reply: "⚠️ שגיאת מפתח (GEMINI_API_KEY)." });
 
-  // הגדרת מאגר המודלים
-const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
-  const selectedModel = modelPool[0]; 
+  if (!apiKey) return res.status(200).json({ reply: "⚠️ חסר GEMINI_API_KEY." });
 
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: selectedModel });
-  try {
-    // 1. שליפת נתוני LIVE להקשר של המוח
-    const [{ data: orders }, { data: containers }] = await Promise.all([
-      supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'history'),
-      supabase.from('container_management').select('*').eq('is_active', true)
-    ]);
+  // 1. הגדרת מאגר המודלים ורוטציה
+  const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
+  let aiResponse = null;
+  let selectedModelName = "";
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // הגדרה נכונה של המודל בתוך ה-Scope
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  // 2. שליפת נתוני LIVE להקשר
+  const [{ data: orders }, { data: containers }] = await Promise.all([
+    supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'history'),
+    supabase.from('container_management').select('*').eq('is_active', true)
+  ]);
 
-    const systemPrompt = `
-      זהות: SABAN AI - המוח המבצע של ח. סבן. אתה מנהל את הארגון של ראמי (הבוס).
-      צוות לתיוג: @הראל (מנכ"ל), @נתנאל (קניין), @איציק זהבי (מנהל החרש), @יואב (סידור).
+  const genAI = new GoogleGenerativeAI(apiKey);
 
-      מצב שטח (${today}):
-      הובלות: ${JSON.stringify(orders || [])}
-      מכולות: ${JSON.stringify(containers || [])}
+  // לוגיקת ניסיון מעבר בין מודלים (Rotation)
+  for (const modelName of modelPool) {
+    try {
+      selectedModelName = modelName;
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-      תפקיד:
-      1. ניתוח פקודות: הזרקה, עדכון, מחיקה או סגירה להיסטוריה.
-      2. תיוג אוטומטי: חוסר מלאי -> @נתנאל. בעיה בסידור -> @יואב. העברות -> @איציק זהבי.
+      const systemPrompt = `
+        זהות: SABAN AI | בוס: ראמי.
+        משימה: ניהול ח. סבן חומרי בניין.
+        צוות: @הראל (מנכ"ל), @נתנאל (קניין), @איציק זהבי (החרש), @יואב (סידור).
+        נתוני שטח: הובלות: ${JSON.stringify(orders || [])} | מכולות: ${JSON.stringify(containers || [])}
+        פורמט פקודות: DATA_START{"action": "INSERT/UPDATE/DELETE", "table": "table_name", "data": {}, "id": "uuid"}DATA_END
+      `;
+
+      const chat = model.startChat({
+        history: [{ role: "user", parts: [{ text: systemPrompt }] }],
+      });
+
+      const result = await chat.sendMessage(`הודעה מ${sender_name || 'ראמי'}: ${query}`);
+      aiResponse = result.response.text();
       
-      פורמט פקודות (חובה JSON בתוך DATA_START ו-DATA_END):
-      DATA_START{"action": "INSERT/UPDATE/DELETE", "table": "orders/container_management", "data": {}, "id": "UUID"}DATA_END
+      if (aiResponse) break; // הצלחנו? צא מהלופ
 
-      סגנון: מקצועי, חד, תמציתי. תמיד תפנה לראמי כ"בוס".
-    `;
+    } catch (err) {
+      console.warn(`מודל ${modelName} נכשל, מנסה את הבא...`, err);
+      continue; // נכשל? נסה את המודל הבא ב-Pool
+    }
+  }
 
-    const chat = model.startChat({
-      history: [{ role: "user", parts: [{ text: systemPrompt }] }],
-    });
+  if (!aiResponse) return res.status(200).json({ reply: "בוס, כל המודלים עמוסים. תנסה עוד דקה." });
 
-    const result = await chat.sendMessage(`הודעה מ${sender_name || 'ראמי'}: ${query}`);
-    const aiText = result.response.text();
-
-    // 2. ביצוע הפקודות ב-Database
-    const jsonMatch = aiText.match(/DATA_START([\s\S]*?)DATA_END/);
+  try {
+    // 3. ביצוע הפקודות ב-Database (הזרקה/מחיקה)
+    const jsonMatch = aiResponse.match(/DATA_START([\s\S]*?)DATA_END/);
     let executionNote = "";
 
     if (jsonMatch) {
-      try {
-        const command = JSON.parse(jsonMatch[1]);
-        if (command.action === 'INSERT') {
-          await supabase.from(command.table).insert([command.data]);
-          executionNote = "✅ המשימה הוזרקה ללוח.";
-        } else if (command.action === 'DELETE') {
-          await supabase.from(command.table).delete().eq('id', command.id);
-          executionNote = "🗑️ המשימה נמחקה.";
-        } else if (command.action === 'UPDATE') {
-          await supabase.from(command.table).update(command.data).eq('id', command.id);
-          executionNote = "🔄 המשימה עודכנה.";
-        }
-      } catch (e) {
-        console.error("JSON Parse Error", e);
+      const command = JSON.parse(jsonMatch[1]);
+      if (command.action === 'INSERT') {
+        await supabase.from(command.table).insert([command.data]);
+        executionNote = "✅ הוזרק ללוח.";
+      } else if (command.action === 'DELETE') {
+        await supabase.from(command.table).delete().eq('id', command.id);
+        executionNote = "🗑️ נמחק מהמערכת.";
+      } else if (command.action === 'UPDATE') {
+        await supabase.from(command.table).update(command.data).eq('id', command.id);
+        executionNote = "🔄 עודכן בהצלחה.";
       }
     }
 
-    const cleanReply = aiText.replace(/DATA_START[\s\S]*?DATA_END/, '').trim();
+    const cleanReply = aiResponse.replace(/DATA_START[\s\S]*?DATA_END/, '').trim();
     return res.status(200).json({ 
       reply: executionNote ? `${executionNote}\n\n${cleanReply}` : cleanReply 
     });
 
   } catch (error) {
-    console.error(error);
-    return res.status(200).json({ reply: "בוס, המוח התחמם ב-Build. תבדוק את הלוג." });
+    return res.status(200).json({ reply: "בוס, המשימה בוצעה אבל יש שגיאה בעיבוד התשובה." });
   }
 }
