@@ -8,12 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // הגדרת משתתפים לצא'ט עם תמונות מקצועיות UI
 const teamMembers = [
-  { name: 'הראל', role: 'מנכ"ל', avatar: 'https://i.postimg.cc/44r6V05C/harel.jpg' },
+  { name: 'הראל', role: 'מנכ"ל', avatar: 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/425943135_310910548378865_3167279294851460849_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AH3gTV5kn0Pf4keryJCrFNpKX-8mVhfeB2zKUz7wJ0Nvw&oe=69D993CF&_nc_sid=5e03e0&_nc_cat=104' },
   { name: 'נתנאל ח. סבן', role: 'קניין', avatar: 'https://i.postimg.cc/3wTMxG7W/ai.jpg' },
-  { name: 'ראמי מסארווה', role: 'מנהל מערכת', avatar: 'https://i.postimg.cc/mD8zQcby/rami.jpg' },
+  { name: 'ראמי מסארווה', role: 'מנהל מערכת', avatar: 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/620186722_866557896271587_5747987865837500471_n.jpg?ccb=11-4&oh=01_Q5Aa4AFHLaxAzRrOCQMldxN3FNxshHVVLZeblN-29NtRk5vcgg&oe=69D9ADEB&_nc_sid=5e03e0&_nc_cat=111' },
   { name: 'יואב', role: 'סידור', avatar: 'https://i.postimg.cc/T34X4BqB/default.jpg' },
-  { name: 'איציק זהבי', role: 'מנהל החרש', avatar: 'https://i.postimg.cc/T34X4BqB/default.jpg' },
-  { name: 'אורן המחסנאי', role: 'מחסן', avatar: 'https://i.postimg.cc/T34X4BqB/default.jpg' },
+  { name: 'איציק זהבי', role: 'מנהל החרש', avatar: 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/138846705_247951546693089_6505800604178808158_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AHK9fHN2ium3-Y-pHN00dmHYmnmaUvizKUwEBg2m5EX5w&oe=69D9AF10&_nc_sid=5e03e0&_nc_cat=105' },
+  { name: 'אורן המחסנאי', role: 'מחסן', avatar: 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/363069350_240772492167785_3931567360848718727_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AG7jNNJwFQfm7M0PfcaezqgISLGrw6_GBoTaN90Nzp_Rg&oe=69D998A6&_nc_sid=5e03e0&_nc_cat=107' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
