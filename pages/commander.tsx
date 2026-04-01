@@ -45,17 +45,27 @@ export default function CommanderPro() {
     }, 150); // מהירות כתיבה
   };
 
-  const handleCommand = async () => {
-    if (!input.trim()) return;
-    const currentInput = input;
-    setInput('');
-    setIsTyping(true);
-    setAiResponse(''); // איפוס תגובה קודמת
-    // סימולציה של חשיבה
-    setTimeout(() => {
-      typeWriter(`קיבלתי בוס. מבצע הזרקה של הזמנה ל-${currentInput.split(' ')[0]} בסידור למחר. הנתונים עודכנו בטבלה.`);
-    }, 1500);
-  };
+const handleCommand = async () => {
+  if (!input.trim()) return;
+  const currentInput = input;
+  setInput('');
+  setIsTyping(true);
+  setAiResponse(''); // איפוס תגובה קודמת
+
+  try {
+    const response = await processCommanderCommand(currentInput, 'ראמי מסארווה');
+    // אם המוח החזיר הודעה, נריץ את אפקט הכתיבה
+    if (response && response.msg) {
+      typeWriter(response.msg);
+    } else {
+      typeWriter("בוס, משהו השתבש בעיבוד הפקודה.");
+    }
+  } catch (err) {
+    typeWriter("שגיאת מערכת. בדוק חיבור ל-Database.");
+  } finally {
+    setIsTyping(false);
+  }
+};
 
   const filteredOrders = orders.filter(o => {
     if (activeTab === 'warehouse') return !o.is_container;
