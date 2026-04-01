@@ -8,7 +8,16 @@ import {
   Bot, Menu, X, Users, Smartphone, Monitor 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/router';
 
+export default function PrivateChat() {
+  const router = useRouter();
+  const { userId, name } = router.query; // קליטת הפרמטרים מהקישור
+
+  // כותרת הצ'אט תשתנה לפי איש הצוות שנבחר
+  const chatTitle = name ? `צ'אט פרטי: ${name}` : "קבוצת ניהול סבן AI";
+  
+  // כאן תוכל להשתמש ב-userId כדי לשלוף את ה-chat_history הייחודי מה-DB
 // אווטארים יציבים כ-Fallback
 const teamPhotos: { [key: string]: string } = {
   'הראל': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/425943135_310910548378865_3167279294851460849_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AH3gTV5kn0Pf4keryJCrFNpKX-8mVhfeB2zKUz7wJ0Nvw&oe=69D993CF&_nc_sid=5e03e0&_nc_cat=104',
