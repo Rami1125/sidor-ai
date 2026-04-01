@@ -60,7 +60,7 @@ export default function MasterDashboard() {
     const cmd = input; setInput(''); setLoading(true);
     setMessages(prev => [...prev, { role: 'user', content: cmd }]);
     try {
-      const res = await fetch('/api/ai-analyst', {
+      const res = await fetch('/api/ai-analyst1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: cmd, sender_name: 'ראמי' })
