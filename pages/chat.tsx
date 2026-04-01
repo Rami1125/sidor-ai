@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
-import AppLayout from '../../components/Layout';
-import { supabase } from '../../lib/supabase';
+import AppLayout from '../components/Layout';
+import { supabase } from '../lib/supabase';
 import { 
   Send, Paperclip, MoreVertical, CheckCheck, 
   Bot, Menu, X, Users, Smartphone, Monitor 
