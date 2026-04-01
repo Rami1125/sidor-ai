@@ -16,8 +16,6 @@ const teamPhotos: { [key: string]: string } = {
   'ראמי מסארווה': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/620186722_866557896271587_5747987865837500471_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AFKllJapRvBGqEZN5CTHK3ku-lrqGuBQObfJ9lH2NuEEw&oe=69D9ADEB&_nc_sid=5e03e0&_nc_cat=111',
   'איציק זהבי': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/138846705_247951546693089_6505800604178808158_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AHK9fHN2ium3-Y-pHN00dmHYmnmaUvizKUwEBg2m5EX5w&oe=69D9AF10&_nc_sid=5e03e0&_nc_cat=105',
   'SABAN AI': 'https://i.postimg.cc/3wTMxG7W/ai.jpg'
-  'אורן המחסנאי': 'https://media-mrs2-3.cdn.whatsapp.net/v/t61.24694-24/363069350_240772492167785_3931567360848718727_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AG7jNNJwFQfm7M0PfcaezqgISLGrw6_GBoTaN90Nzp_Rg&oe=69D998A6&_nc_sid=5e03e0&_nc_cat=107',
-
 };
 
 export default function SabanGroupChat() {
