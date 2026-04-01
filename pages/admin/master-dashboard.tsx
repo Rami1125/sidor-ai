@@ -81,7 +81,7 @@ export default function SabanUltimateControlCenter() {
     setMessages(prev => [...prev, { role: 'user', content: cmd }]);
 
     try {
-      const res = await fetch('/api/gemini', {
+      const res = await fetch('/api/ai-analyst1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: cmd, sender_name: 'ראמי' })
