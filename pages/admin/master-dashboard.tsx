@@ -4,7 +4,7 @@ import AppLayout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
 import { 
   Truck, Box, MapPin, ChevronDown, Clock, 
-  User, Calendar, Activity, CheckCircle2, AlertTriangle, BellRing
+  User, Calendar, Activity, CheckCircle2, AlertTriangle, BellRing,Archive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OneSignal from 'react-onesignal';
@@ -116,22 +116,22 @@ export default function MasterDashboard() {
         <ChevronDown size={12} />
       </button>
       <AnimatePresence>
-        {openStatusId === id && (
-          <motion.div initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }}
-            className="absolute left-0 mt-2 w-36 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
-          >
-            {[
-              { label: 'मמתין', val: 'pending', icon: <Clock size={12}/>, color: 'text-amber-600' },
-              { label: 'מאושר', val: 'approved', icon: <CheckCircle2 size={12}/>, color: 'text-emerald-600' },
-              { label: 'היסטוריה', val: 'history', icon: <Archive size={12}/>, color: 'text-slate-400' }
-            ].map(s => (
-              <button key={s.val} onClick={() => updateStatus(id, table, s.val)} className={`w-full text-right px-4 py-2.5 text-[11px] font-bold hover:bg-slate-50 flex items-center gap-2 ${s.color}`}>
-                {s.icon} {s.label}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+  {openStatusId === id && (
+    <motion.div initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }}
+      className="absolute left-0 mt-2 w-36 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
+    >
+      {[
+        { label: 'ממתין', val: 'pending', icon: <Clock size={12}/>, color: 'text-amber-600' },
+        { label: 'מאושר', val: 'approved', icon: <CheckCircle2 size={12}/>, color: 'text-emerald-600' },
+        { label: 'היסטוריה', val: 'history', icon: <Archive size={12}/>, color: 'text-slate-400' }
+      ].map(s => (
+        <button key={s.val} onClick={() => updateStatus(id, table, s.val)} className={`w-full text-right px-4 py-2.5 text-[11px] font-bold hover:bg-slate-50 flex items-center gap-2 ${s.color}`}>
+          {s.icon} {s.label}
+        </button>
+      ))}
+    </motion.div>
+  )}
+</AnimatePresence>>
     </div>
   );
 
