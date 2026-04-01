@@ -19,58 +19,55 @@ export default function MasterDashboard() {
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
   const today = new Date().toISOString().split('T')[0];
+  
+// 1. וודא שיש לך את ה-State של הזמן הנוכחי בראש הקומפוננטה
+const [now, setNow] = useState(new Date());
 
 useEffect(() => {
-  fetchData(); // טעינה ראשונית
+  // טעינה ראשונית של הנתונים
+  fetchData();
 
-  // האזנה לשינויים בטבלאות ב-Realtime
+  // מנוע הטיימר: מעדכן את now בכל שנייה ומכריח את ה-UI להתרענן
+  const timer = setInterval(() => {
+    setNow(new Date());
+  }, 1000);
+
+  // מנוע Realtime: מאזין לשינויים ב-Supabase
   const channel = supabase
-    .channel('schema-db-changes')
+    .channel('master-live-sync')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'orders' },
-      () => fetchData() // מרענן נתונים כשיש הזמנה חדשה
+      () => fetchData()
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'container_management' },
-      () => fetchData() // מרענן נתונים כשיש מכולה חדשה
+      () => fetchData()
     )
     .subscribe();
 
+  // ניקוי משאבים: חשוב מאוד כדי למנוע כפילויות וזליגת זיכרון
   return () => {
+    clearInterval(timer);
     supabase.removeChannel(channel);
   };
 }, []);
 
-  const fetchData = async () => {
-    const { data: o } = await supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'history');
-    const { data: c } = await supabase.from('container_management').select('*').eq('is_active', true);
-    setTruckOrders(o || []);
-    setContainerOrders(c || []);
-  };
+// 2. פונקציית השליפה נשארת כפי שהייתה
+const fetchData = async () => {
+  const today = new Date().toISOString().split('T')[0];
+  const { data: o } = await supabase.from('orders')
+    .select('*')
+    .eq('delivery_date', today)
+    .neq('status', 'history');
+    
+  const { data: c } = await supabase.from('container_management')
+    .select('*')
+    .eq('is_active', true);
 
-// פונקציית החישוב שמשתמשת ב-now המעודכן
-const calculateTimer = (targetTime: string) => {
-  if (!targetTime) return { text: '--:--:--', isUrgent: false, isPast: false };
-  
-  const [hours, minutes] = targetTime.split(':').map(Number);
-  const target = new Date();
-  target.setHours(hours, minutes, 0, 0);
-
-  const diff = target.getTime() - now.getTime();
-  const isPast = diff < 0;
-  const absDiff = Math.abs(diff);
-
-  const h = Math.floor(absDiff / 3600000);
-  const m = Math.floor((absDiff % 3600000) / 60000);
-  const s = Math.floor((absDiff % 60000) / 1000);
-
-  return {
-    text: `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
-    isUrgent: !isPast && diff < 1800000, // פחות מחצי שעה
-    isPast
-  };
+  setTruckOrders(o || []);
+  setContainerOrders(c || []);
 };
   const updateStatus = async (id: string, table: string, newStatus: string) => {
     await supabase.from(table).update({ status: newStatus }).eq('id', id);
