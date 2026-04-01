@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
 
     const genAI = new GoogleGenerativeAI(apiKey!);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
 
     // 2. הגדרת המוח עם יכולות ביצוע ותיוג
     const systemPrompt = `
