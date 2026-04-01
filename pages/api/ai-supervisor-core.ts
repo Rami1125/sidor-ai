@@ -9,69 +9,73 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const apiKey = process.env.GEMINI_API_KEY;
   const today = new Date().toISOString().split('T')[0];
 
+  if (!apiKey) return res.status(200).json({ reply: "⚠️ שגיאת מפתח (GEMINI_API_KEY חסר)." });
+
   try {
-    // 1. "עיניים" - שליפת מצב השטח הנוכחי להקשר של המוח
+    // 1. שליפת נתוני LIVE להקשר של המוח
     const [{ data: orders }, { data: containers }] = await Promise.all([
       supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'history'),
       supabase.from('container_management').select('*').eq('is_active', true)
     ]);
 
-    const genAI = new GoogleGenerativeAI(apiKey!);
-    const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // הגדרה נכונה של המודל בתוך ה-Scope
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    // 2. הגדרת המוח עם יכולות ביצוע ותיוג
     const systemPrompt = `
-      זהות: SABAN AI - המוח המבצע של ח. סבן.
-      בוס: ראמי.
+      זהות: SABAN AI - המוח המבצע של ח. סבן. אתה מנהל את הארגון של ראמי (הבוס).
       צוות לתיוג: @הראל (מנכ"ל), @נתנאל (קניין), @איציק זהבי (מנהל החרש), @יואב (סידור).
 
-      מצב שטח נוכחי (${today}):
+      מצב שטח (${today}):
       הובלות: ${JSON.stringify(orders || [])}
       מכולות: ${JSON.stringify(containers || [])}
 
       תפקיד:
-      1. ניתוח פקודות: הזרקת הזמנה, עדכון נהג, מחיקה או סגירה להיסטוריה.
-      2. תיוג אוטומטי: אם חסר מלאי תייג את @נתנאל. אם יש בעיה בסידור תייג את @יואב.
+      1. ניתוח פקודות: הזרקה, עדכון, מחיקה או סגירה להיסטוריה.
+      2. תיוג אוטומטי: חוסר מלאי -> @נתנאל. בעיה בסידור -> @יואב. העברות -> @איציק זהבי.
       
-      פורמט פקודות (חובה להחזיר JSON בתוך DATA_START ו-DATA_END):
-      לדוגמה: DATA_START{"action": "INSERT/UPDATE/DELETE", "table": "orders/container_management", "data": {...}}DATA_END
+      פורמט פקודות (חובה JSON בתוך DATA_START ו-DATA_END):
+      DATA_START{"action": "INSERT/UPDATE/DELETE", "table": "orders/container_management", "data": {}, "id": "UUID"}DATA_END
 
-      סגנון: חד, תמציתי, מקצועי.
+      סגנון: מקצועי, חד, תמציתי. תמיד תפנה לראמי כ"בוס".
     `;
 
     const chat = model.startChat({
       history: [{ role: "user", parts: [{ text: systemPrompt }] }],
     });
 
-    const result = await chat.sendMessage(`הודעה מ${sender_name || 'מערכת'}: ${query}`);
+    const result = await chat.sendMessage(`הודעה מ${sender_name || 'ראמי'}: ${query}`);
     const aiText = result.response.text();
 
-    // 3. "ידיים" - חילוץ הפקודה וביצוע ב-Database
+    // 2. ביצוע הפקודות ב-Database
     const jsonMatch = aiText.match(/DATA_START([\s\S]*?)DATA_END/);
     let executionNote = "";
 
     if (jsonMatch) {
-      const command = JSON.parse(jsonMatch[1]);
-      
-      if (command.action === 'INSERT') {
-        await supabase.from(command.table).insert([command.data]);
-        executionNote = "✅ המשימה הוזרקה ללוח.";
-      } else if (command.action === 'DELETE') {
-        await supabase.from(command.table).delete().match(command.where || { id: command.id });
-        executionNote = "🗑️ המשימה נמחקה מהמערכת.";
-      } else if (command.action === 'UPDATE') {
-        await supabase.from(command.table).update(command.data).match(command.where || { id: command.id });
-        executionNote = "🔄 המשימה עודכנה.";
+      try {
+        const command = JSON.parse(jsonMatch[1]);
+        if (command.action === 'INSERT') {
+          await supabase.from(command.table).insert([command.data]);
+          executionNote = "✅ המשימה הוזרקה ללוח.";
+        } else if (command.action === 'DELETE') {
+          await supabase.from(command.table).delete().eq('id', command.id);
+          executionNote = "🗑️ המשימה נמחקה.";
+        } else if (command.action === 'UPDATE') {
+          await supabase.from(command.table).update(command.data).eq('id', command.id);
+          executionNote = "🔄 המשימה עודכנה.";
+        }
+      } catch (e) {
+        console.error("JSON Parse Error", e);
       }
     }
 
     const cleanReply = aiText.replace(/DATA_START[\s\S]*?DATA_END/, '').trim();
     return res.status(200).json({ 
-      reply: `${executionNote}\n\n${cleanReply}` 
+      reply: executionNote ? `${executionNote}\n\n${cleanReply}` : cleanReply 
     });
 
   } catch (error) {
     console.error(error);
-    return res.status(200).json({ reply: "בוס, תקלה בביצוע הפקודה. תבדוק את הלוג." });
+    return res.status(200).json({ reply: "בוס, המוח התחמם ב-Build. תבדוק את הלוג." });
   }
 }
