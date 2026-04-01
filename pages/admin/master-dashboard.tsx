@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
-// שינוי לנתיב יחסי ישיר כדי לעקוף בעיות Alias ב-Build
-import { createClient } from '@supabase/supabase-url-helpers'; // ייבוא עקיף למניעת שגיאת missing module אם הקובץ חסר
+import { createClient } from '@supabase/supabase-js';
 import { 
   LayoutDashboard, Send, Clock, MapPin, Bot, Truck, Box, 
   Timer, Activity, CheckCheck, AlertCircle, ArrowRightLeft, Warehouse,
@@ -11,12 +10,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// הגדרת קליינט Supabase פנימי למקרה שהקובץ ב-lib חסר ב-Build
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-
+// אתחול Supabase ישיר עם הגנה ל-Build
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl ? createSupabaseClient(supabaseUrl, supabaseKey) : null;
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
 
 const DRIVERS = [
   { name: 'חכמת', img: 'https://i.postimg.cc/d3S0NJJZ/Screenshot-20250623-200646-Facebook.jpg' },
@@ -34,8 +31,6 @@ export default function SabanUltimateControlCenter() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(new Date());
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -88,7 +83,7 @@ export default function SabanUltimateControlCenter() {
     setMessages(prev => [...prev, { role: 'user', content: cmd }]);
 
     try {
-      const res = await fetch('/api/ai-analyst1', {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: cmd, sender_name: 'ראמי' })
@@ -193,7 +188,7 @@ export default function SabanUltimateControlCenter() {
                   ))}
                 </div>
                 <form onSubmit={handleChatCommand} className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
-                   <input value={input} onChange={e => setInput(e.target.value)} placeholder="הקלד פקודה למוח..." className="flex-1 p-4 bg-white rounded-2xl border border-slate-200 outline-none text-sm font-bold" />
+                   <input value={input} onChange={e => setInput(e.target.value)} placeholder="הקלד פקודה למוח..." className="flex-1 p-4 bg-white rounded-2xl border border-slate-200 outline-none text-sm font-bold shadow-inner" />
                    <button type="submit" className="bg-emerald-600 text-white w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center"><Send size={20} className="rotate-180"/></button>
                 </form>
               </motion.div>
