@@ -8,9 +8,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { query, sender_name } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
   const today = new Date().toISOString().split('T')[0];
+  
+  if (!apiKey) return res.status(200).json({ reply: "⚠️ שגיאת מפתח (GEMINI_API_KEY)." });
 
-  if (!apiKey) return res.status(200).json({ reply: "⚠️ שגיאת מפתח (GEMINI_API_KEY חסר)." });
+  // הגדרת מאגר המודלים
+const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
+  const selectedModel = modelPool[0]; 
 
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: selectedModel });
   try {
     // 1. שליפת נתוני LIVE להקשר של המוח
     const [{ data: orders }, { data: containers }] = await Promise.all([
