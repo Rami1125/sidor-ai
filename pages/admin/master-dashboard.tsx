@@ -20,12 +20,28 @@ export default function MasterDashboard() {
   const [now, setNow] = useState(new Date());
   const today = new Date().toISOString().split('T')[0];
 
-  useEffect(() => {
-    fetchData();
-    const t = setInterval(() => setNow(new Date()), 1000);
-    const channel = supabase.channel('live_sync').on('postgres_changes', { event: '*', schema: 'public' }, fetchData).subscribe();
-    return () => { clearInterval(t); channel.unsubscribe(); };
-  }, []);
+useEffect(() => {
+  fetchData(); // טעינה ראשונית
+
+  // האזנה לשינויים בטבלאות ב-Realtime
+  const channel = supabase
+    .channel('schema-db-changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'orders' },
+      () => fetchData() // מרענן נתונים כשיש הזמנה חדשה
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'container_management' },
+      () => fetchData() // מרענן נתונים כשיש מכולה חדשה
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
   const fetchData = async () => {
     const { data: o } = await supabase.from('orders').select('*').eq('delivery_date', today).neq('status', 'history');
