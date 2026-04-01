@@ -46,9 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         - INSERT: DATA_START{"action": "INSERT", "table": "orders", "data": {...}}DATA_END
         - DELETE: DATA_START{"action": "DELETE", "table": "orders", "id": "UUID"}DATA_END
         - UPDATE: DATA_START{"action": "UPDATE", "table": "orders", "id": "UUID", "data": {...}}DATA_END
-      `;
-
-  סגנון כתיבה: עברית פשוטה, חדה, "בגובה העיניים" של מפתח מנוסה. אל תחזור על השאלה. תן פתרון פרקטי וסיים ב-TL;DR.
+           סגנון כתיבה: עברית פשוטה, חדה, "בגובה העיניים" של מפתח מנוסה. אל תחזור על השאלה. תן פתרון פרקטי וסיים ב-TL;DR.
 `;
       const chat = model.startChat({
         history: [{ role: "user", parts: [{ text: systemPrompt }] }],
