@@ -1,6 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Head from 'next/head';
+import Script from 'next/script';
 import { Menu, X, LayoutDashboard, MessageSquare, Users, Settings, Bell, ChevronLeft, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,6 +27,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#111B21] font-sans" dir="rtl">
+      <Head>
+        <title>SABAN OS</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+      </Head>
+
+      {/* OneSignal SDK Setup */}
+      <Script 
+        src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" 
+        strategy="afterInteractive" 
+      />
+      <Script id="onesignal-init" strategy="afterInteractive">
+        {`
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+              appId: "327841ea-ec74-457a-a2b5-f43d06e8d661",
+            });
+          });
+        `}
+      </Script>
       
       {/* Header - Saban OS Style */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-lg border-b border-slate-200 flex items-center justify-between px-6 z-[100] shadow-sm">
