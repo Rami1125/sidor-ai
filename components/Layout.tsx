@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
-import Layout from '../components/Layout'; // שנה מ-AppLayout ל-Layout
+import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { 
   Send, Paperclip, MoreVertical, 
@@ -104,14 +104,13 @@ export default function SabanGroupChat() {
       setIsAiTyping(false);
     }
   };
-
-  return (
-    <AppLayout>
+  
+return (
+    <Layout>
       <div className="flex h-[calc(100vh-64px)] w-full bg-[#E5DDD5] overflow-hidden relative" dir="rtl">
         <Head>
-          <title>SABAN OS | Group Chat</title>
+          <title>  סידור|צאט</title>
         </Head>
-
         {/* Sidebar */}
         <AnimatePresence>
           {isSidebarOpen && (
