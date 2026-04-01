@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Truck, Box, MessageSquare, Settings, ChevronLeft } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  // השורה הזו הייתה חסרה או במיקום לא נכון
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const menuItems = [
@@ -27,7 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#111B21] font-sans" dir="rtl">
       <Head>
-        <title>לוח סידור | SABAN OS</title>
+        <title>SABAN OS | Command Center</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </Head>
 
@@ -63,7 +64,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
                 <span className="font-black italic text-lg text-emerald-600">לוח סידור</span>
-                <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-black transition-colors">
+                <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-black">
                   <X size={22} />
                 </button>
               </div>
@@ -105,56 +106,5 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
     </div>
-  );
-}            <motion.div 
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-72 bg-white z-[120] p-6 shadow-2xl flex flex-col border-l border-slate-100"
-            >
-              <div className="flex items-center justify-between mb-10 pb-4 border-b border-slate-100">
-                <span className="font-black italic text-lg text-emerald-600">SABAN OS</span>
-                <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-black">
-                  <X size={22} />
-                </button>
-              </div>
-              
-              <nav className="space-y-2 flex-1">
-                {menuItems.map((item) => (
-                  <Link href={item.href} key={item.name} onClick={() => setIsMenuOpen(false)} className="block">
-                    <div className="flex items-center gap-4 p-4 hover:bg-emerald-50 rounded-2xl transition-all group">
-                      <item.icon size={20} className="text-slate-400 group-hover:text-emerald-600" />
-                      <span className="font-bold text-sm text-slate-800">{item.name}</span>
-                    </div>
-                  </Link>
-                ))}
-              </nav>
-              
-              {/* רשימת משתתפים לחיצה */}
-              <div className="mt-auto pt-6 border-t border-slate-100 space-y-3">
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">צוות פעיל</p>
-                {teamMembers.map(member => (
-                  <Link 
-                    href={`/chat?user=${encodeURIComponent(member.name)}`} 
-                    key={member.name}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl transition-all group"
-                  >
-                    <div className="relative">
-                      <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-full border border-slate-200" />
-                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-slate-900 group-hover:text-emerald-600">{member.name}</p>
-                      <p className="text-[10px] text-slate-400 font-medium leading-none">{member.role}</p>
-                    </div>
-                    <ChevronLeft size={14} className="text-slate-300 group-hover:text-emerald-600" />
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div> // <--- כאן היה חסר ה-div הסוגר!
   );
 }
