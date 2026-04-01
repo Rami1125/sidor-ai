@@ -50,7 +50,7 @@ export default function CommanderPro() {
     const currentInput = input;
     setInput('');
     setIsTyping(true);
-
+    setAiResponse(''); // איפוס תגובה קודמת
     // סימולציה של חשיבה
     setTimeout(() => {
       typeWriter(`קיבלתי בוס. מבצע הזרקה של הזמנה ל-${currentInput.split(' ')[0]} בסידור למחר. הנתונים עודכנו בטבלה.`);
