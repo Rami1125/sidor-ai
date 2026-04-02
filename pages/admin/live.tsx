@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
+import ChatPopup from 'admin/ChatPopup';
 
 // אייקונים
 import {
