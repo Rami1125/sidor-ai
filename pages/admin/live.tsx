@@ -78,6 +78,22 @@ export default function LiveDashboard() {
     );
   };
 
+<button
+  onClick={(e) => {
+    e.stopPropagation();
+    console.log("✅ AI BUTTON CLICKED");
+  }}
+  className="
+    sticky bottom-0 
+    bg-blue-600 hover:bg-blue-700 
+    text-white py-3 px-6 rounded-full 
+    shadow-xl w-full text-lg font-bold
+    z-[100000]
+  "
+>
+  עדכן באמצעות AI
+</button>
+
   const onCardClick = (order) => {
     const containerInfo = getContainerInfo(order);
     setActiveOrder({ ...order, containerInfo });
