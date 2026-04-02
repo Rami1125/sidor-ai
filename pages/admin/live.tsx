@@ -1,7 +1,3 @@
-// *** MASTER DASHBOARD FINAL VERSION ***
-// בנייה מלאה – Light Mode מודרני, זיקית, AI, צ'אט פנימי, התראות וצלצול בזמן אמת,
-// חיבור לטבלאות, RTL מלא, UI משודרג, ללא שינוי לוגיקה פנימית.
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -22,7 +18,7 @@ import {
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import ChatPopup from './ChatPopup';
+import ChatPopup from 'admin/ChatPopup';
 
 const DRIVERS = [
   { name: 'חכמת', img: 'https://i.postimg.cc/d3S0NJJZ/Screenshot-20250623-200646-Facebook.jpg' },
