@@ -1,17 +1,17 @@
 import React from "react";
 
+interface WarehouseLogoProps {
+  warehouse?: string | null;
+  className?: string;
+}
+
 const logos: Record<string, string> = {
   "שארק 30": "/logos/shark30.png",
   "כראדי 32": "/logos/karadi32.png",
   "שי שרון": "/logos/shai-sharon.png",
 };
 
-interface Props {
-  warehouse?: string | null;
-  className?: string;
-}
-
-export default function WarehouseLogos({ warehouse, className }: Props) {
+export default function WarehouseLogos({ warehouse, className }: WarehouseLogoProps) {
   if (!warehouse) return null;
 
   const src = logos[warehouse];
@@ -21,7 +21,7 @@ export default function WarehouseLogos({ warehouse, className }: Props) {
     <img
       src={src}
       alt={warehouse}
-      className={className ?? "w-full h-full object-contain"}
+      className={className ? className : "w-full h-full object-contain"}
     />
   );
 }
