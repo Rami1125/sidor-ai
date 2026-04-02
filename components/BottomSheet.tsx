@@ -12,39 +12,9 @@ interface BottomSheetProps {
 export default function BottomSheet({ children, onClose }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // מלשינון מלא – בדיקה מה חוסם לחיצות
-    setTimeout(() => {
-      if (!sheetRef.current) return;
-
-      const el = sheetRef.current;
-      const styles = window.getComputedStyle(el);
-
-      console.warn("✅ BOTTOM SHEET DEBUG START");
-      console.log("Element:", el);
-      console.log("zIndex:", styles.zIndex);
-      console.log("position:", styles.position);
-      console.log("pointer-events:", styles.pointerEvents);
-
-      const topEl = document.elementFromPoint(
-        window.innerWidth / 2,
-        window.innerHeight - 20
-      );
-
-      console.log("Element capturing bottom clicks:", topEl);
-      console.warn("✅ BOTTOM SHEET DEBUG END");
-    }, 500);
-  }, []);
-
-  // לוג לכל ניסיון לחיצה על התוכן
-  const onClickLayer = (e: any) => {
-    console.log("CLICK EVENT ON SHEET:", e.target);
-  };
-
   return (
     <motion.div
       ref={sheetRef}
-      onClick={onClickLayer}
       initial={{ y: "100%" }}
       animate={{ y: 0 }}
       exit={{ y: "100%" }}
@@ -52,26 +22,41 @@ export default function BottomSheet({ children, onClose }: BottomSheetProps) {
       className="
         fixed bottom-0 left-0 w-full 
         bg-white rounded-t-3xl shadow-2xl 
-        p-6 z-[99999]
-        h-[75vh] overflow-y-auto 
-        pointer-events-auto
+        z-[99999] 
+        h-[75vh] 
+        pointer-events-auto 
+        flex flex-col
       "
       style={{ direction: "rtl" }}
     >
-
       {/* Close Button */}
       <button
-        onClick={() => {
-          console.log("✅ CLOSE BUTTON CLICKED");
-          onClose();
-        }}
+        onClick={onClose}
         className="absolute top-3 left-3 text-gray-600 hover:text-gray-900 z-[100000]"
       >
         <X size={26} />
       </button>
 
-      {/* CONTENT */}
-      <div className="mt-10 pb-24">{children}</div>
+      {/* SCROLLABLE AREA */}
+      <div className="mt-12 px-4 pb-32 overflow-y-auto">
+        {children}
+      </div>
+
+      {/* AI BUTTON – ALWAYS CLICKABLE */}
+      <div className="absolute bottom-4 left-0 w-full px-6">
+        <button
+          onClick={() => console.log("✅ AI BUTTON CLICKED")}
+          className="
+            bg-blue-600 hover:bg-blue-700 
+            text-white font-bold 
+            w-full py-3 rounded-full 
+            shadow-xl text-lg
+            z-[200000]
+          "
+        >
+          עדכן באמצעות AI
+        </button>
+      </div>
     </motion.div>
   );
 }
