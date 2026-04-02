@@ -23,8 +23,8 @@ export default function ChatPopup({ order, onClose }: ChatPopupProps) {
     setLoading(true);
 
     try {
-      const res = await fetch("https://your-server.com/ai", {
-        method: "POST",
+   const res = await fetch("/api/ai-supervisor-core", {
+   method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: order.id,
