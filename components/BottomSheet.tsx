@@ -27,7 +27,7 @@ export default function BottomSheet({ children, onClose }: BottomSheetProps) {
         pointer-events-auto 
         flex flex-col
       "
-      style={{ direction: "rtl" }}
+      style={{ direction: 'rtl' }}
     >
       {/* Close Button */}
       <button
@@ -37,15 +37,15 @@ export default function BottomSheet({ children, onClose }: BottomSheetProps) {
         <X size={26} />
       </button>
 
-      {/* SCROLLABLE AREA */}
+      {/* Scrollable Content */}
       <div className="mt-12 px-4 pb-32 overflow-y-auto">
         {children}
       </div>
 
-      {/* AI BUTTON – ALWAYS CLICKABLE */}
+      {/* AI BUTTON – Always Clickable */}
       <div className="absolute bottom-4 left-0 w-full px-6">
         <button
-          onClick={() => console.log("✅ AI BUTTON CLICKED")}
+          onClick={() => console.log('✅ AI BUTTON CLICKED')}
           className="
             bg-blue-600 hover:bg-blue-700 
             text-white font-bold 
