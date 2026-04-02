@@ -1,5 +1,3 @@
-// ChatPopup.tsx — פופאפ AI מלא, תואם לוגיקה קיימת, מוכן להדבקה
-
 'use client';
 
 import React, { useState } from 'react';
@@ -24,7 +22,6 @@ export default function ChatPopup({ order, onClose }: ChatPopupProps) {
     setMsg('');
     setLoading(true);
 
-    // בקשה ל-AI (השרת שלך)
     try {
       const res = await fetch("https://your-server.com/ai", {
         method: "POST",
@@ -44,7 +41,7 @@ export default function ChatPopup({ order, onClose }: ChatPopupProps) {
     } catch (e) {
       setChat((prev) => [
         ...prev,
-        { from: 'ai', text: "שגיאת תקשורת עם AI" }
+        { from: 'ai', text: "שגיאה בתקשורת עם שרת ה-AI" }
       ]);
     }
 
@@ -59,15 +56,13 @@ export default function ChatPopup({ order, onClose }: ChatPopupProps) {
       className="fixed bottom-0 right-0 w-full md:w-96 bg-white shadow-2xl border rounded-t-2xl z-50"
       style={{ direction: 'rtl' }}
     >
-      {/* Header */}
       <div className="p-4 border-b flex justify-between items-center bg-blue-600 text-white rounded-t-2xl">
-        <h2 className="font-bold">עדכון הזמנה עם AI – {order.client_info}</h2>
+        <h2 className="font-bold">עדכון הזמנה – {order.client_info}</h2>
         <button onClick={onClose}>
           <X size={24} className="text-white" />
         </button>
       </div>
 
-      {/* Chat Message Area */}
       <div className="p-4 h-72 overflow-y-auto space-y-3 bg-gray-50">
         {chat.map((c, i) => (
           <div
@@ -89,12 +84,11 @@ export default function ChatPopup({ order, onClose }: ChatPopupProps) {
         )}
       </div>
 
-      {/* Input */}
       <div className="p-4 border-t flex gap-2 bg-white">
         <input
           type="text"
           className="flex-1 p-2 border rounded-lg outline-none"
-          placeholder="מה תרצה לעדכן בהזמנה?"
+          placeholder="מה תרצה לעדכן?"
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
         />
@@ -109,4 +103,3 @@ export default function ChatPopup({ order, onClose }: ChatPopupProps) {
     </motion.div>
   );
 }
-``
