@@ -1,6 +1,6 @@
 import React from 'react';
 
-const logos = {
+const logos: Record<string, string> = {
   "שארק 30": "/logos/shark30.png",
   "כראדי 32": "/logos/karadi32.png",
   "שי שרון": "/logos/shai-sharon.png"
