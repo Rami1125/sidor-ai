@@ -1,179 +1,220 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
+import AppLayout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
+
+// אייקונים קיימים — ללא שינוי
+import {
+  Clock,
+  MapPin,
+  Truck,
+  Box,
+  Activity,
+  CheckCheck,
+  Bot,
+  AlertCircle
+} from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Truck, Box, MessageSquare, ChevronRight, AlertCircle } from 'lucide-react';
-import Layout from '../../components/Layout';
 
-// רכיב טיימר עם לוגיקת הבהוב
-const OrderTimer = ({ deliveryTime, deliveryDate }: { deliveryTime: string, deliveryDate: string }) => {
-  const [timeLeft, setTimeLeft] = useState<string>('');
-  const [isUrgent, setIsUrgent] = useState(false);
+// נהגים – ללא שינוי
+const DRIVERS = [
+  { name: 'חכמת', img: 'https://i.postimg.cc/d3S0NJJZ/Screenshot-20250623-200646-Facebook.jpg' },
+  { name: 'עלי', img: 'https://i.postimg.cc/tCNbgXK3/Screenshot-20250623-200744-Tik-Tok.jpg' }
+];
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const target = new Date(`${deliveryDate}T${deliveryTime}`);
-      const diff = target.getTime() - now.getTime();
+const RAMI_AVATAR =
+  "https://media-mrs2-2.cdn.whatsapp.net/v/t61.24694-24/620186722_866557896271587_5747987865837500471_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AG_JCByU59rXu4ybPiRgaD2riDMbb0ujm-XlzxUbmgPXA&oe=69D7EBEB&_nc_sid=5e03e0&_nc_cat=111";
 
-      if (diff <= 0) {
-        setTimeLeft('ביצוע...');
-        setIsUrgent(false);
-      } else {
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const mins = Math.floor((diff / (1000 * 60)) % 60);
-        setTimeLeft(`${hours}ש : ${mins}ד`);
-        // הבהוב אם נשאר פחות משעה
-        setIsUrgent(diff < 3600000);
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [deliveryTime, deliveryDate]);
-
-  return (
-    <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-bold ${
-      isUrgent ? 'bg-red-500/20 text-red-500 animate-pulse' : 'bg-emerald-500/10 text-emerald-500'
-    }`}>
-      <Clock size={14} />
-      <span>{timeLeft}</span>
-    </div>
-  );
-};
-
-export default function MasterDashboard() {
+export default function SabanDashboard() {
+  const [mounted, setMounted] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
-  const [containers, setContainers] = useState<any[]>([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
+    setMounted(true);
     fetchData();
-    const subscription = supabase
-      .channel('master_sync')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => fetchData())
+
+    const t = setInterval(() => setNow(new Date()), 1000);
+
+    const channel = supabase
+      .channel('dashboard_live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        fetchData
+      )
       .subscribe();
-    return () => { supabase.removeChannel(subscription); };
+
+    return () => {
+      clearInterval(t);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async () => {
-    const { data: o } = await supabase.from('orders').select('*').order('delivery_time', { ascending: true });
-    const { data: c } = await supabase.from('container_management').select('*').eq('is_active', true);
-    if (o) setOrders(o);
-    if (c) setContainers(c);
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('delivery_date', today)
+      .neq('status', 'deleted');
+
+    setOrders(data ?? []);
   };
 
+  const calculateTime = (target: string) => {
+    const diff = new Date(target).getTime() - now.getTime();
+    if (diff <= 0) return { expired: true };
+
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+
+    return { expired: false, h, m, s, urgent: diff < 3600000 };
+  };
+
+  if (!mounted) return null;
+
   return (
-    <Layout>
-      <Head>
-        <title>SabanOS | Master Dashboard</title>
-      </Head>
-
-      <div className="flex h-screen bg-[#0a0a0a] text-gray-100 overflow-hidden">
+    <AppLayout>
+      <div dir="rtl" className="p-6 w-full">
         
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-          <header className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-black bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
-                SabanOS Master
-              </h1>
-              <p className="text-gray-500 text-sm italic">ניהול חומרים ומכולות בזמן אמת</p>
-            </div>
-            <button 
-              onClick={() => setIsChatOpen(!isChatOpen)}
-              className="md:hidden p-3 bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/20"
-            >
-              <MessageSquare size={24} />
-            </button>
-          </header>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* סקשן הזמנות חומרי בניין */}
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Truck className="text-emerald-500" />
-                <h2 className="text-xl font-bold">הזמנות פעילות</h2>
-              </div>
-              
-              <div className="grid gap-4">
-                {orders.map((order) => (
-                  <motion.div 
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    key={order.id}
-                    className="bg-[#161616] border border-white/5 p-4 rounded-2xl flex justify-between items-center group hover:border-emerald-500/30 transition-all shadow-xl"
-                  >
-                    <div className="flex gap-4 items-center">
-                      <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors">
-                        <Box size={24} className="text-gray-400 group-hover:text-emerald-500" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg">{order.customer_name}</h3>
-                        <p className="text-sm text-gray-500">{order.material_type} | {order.location}</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <OrderTimer deliveryTime={order.delivery_time} deliveryDate={order.delivery_date} />
-                      <span className="text-xs font-mono text-gray-600">{order.delivery_time}</span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-
-            {/* סקשן מכולות */}
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Box className="text-blue-500" />
-                <h2 className="text-xl font-bold">סטטוס מכולות בשטח</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {containers.map((container) => (
-                  <div key={container.id} className="bg-[#161616] border border-white/5 p-4 rounded-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-1 h-full bg-blue-500" />
-                    <h3 className="font-bold">{container.customer_name}</h3>
-                    <p className="text-xs text-gray-500 mb-3">{container.site_address}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded uppercase">
-                        {container.container_size || '8m³'}
-                      </span>
-                      <span className="text-sm font-bold">{container.days_on_site || 0} ימים</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+        {/* כותרת הדשבורד */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-[#00c89d]">לוח משימות LIVE</h2>
+            <p className="text-gray-400 mt-1">מחובר בזמן אמת למאגר המרכזי</p>
           </div>
-        </main>
 
-        {/* Side Chat Overlay / Menu */}
-        <AnimatePresence>
-          {(isChatOpen || typeof window !== 'undefined' && window.innerWidth > 768) && (
-            <motion.aside 
-              initial={{ x: 400 }}
-              animate={{ x: 0 }}
-              exit={{ x: 400 }}
-              className="w-full md:w-[400px] border-l border-white/5 bg-[#0f0f0f] flex flex-col"
-            >
-              <div className="p-4 border-b border-white/5 flex justify-between items-center bg-[#161616]">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="font-bold">Sidor-AI Supervisor</span>
-                </div>
-                <button onClick={() => setIsChatOpen(false)} className="md:hidden">
-                  <ChevronRight />
-                </button>
-              </div>
-              <iframe 
-                src="/admin/group-chat" 
-                className="flex-1 w-full border-none"
-                title="AI Chat"
-              />
-            </motion.aside>
-          )}
-        </AnimatePresence>
+          {/* זמן ושעה */}
+          <div className="text-right">
+            <p className="text-2xl font-semibold text-white">{now.toLocaleTimeString('he-IL')}</p>
+            <p className="text-gray-400">{new Date().toLocaleDateString('he-IL')}</p>
+          </div>
+        </div>
+
+        {/* גריד כרטיסים */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <AnimatePresence>
+            {orders.length > 0 ? (
+              orders.map((order) => {
+                const t = calculateTime(`${order.delivery_date}T${order.order_time}`);
+
+                const driverImg =
+                  DRIVERS.find((d) => d.name === order.driver_name)?.img || RAMI_AVATAR;
+
+                return (
+                  <motion.div
+                    key={order.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="
+                      glass-card rounded-xl p-5 shadow-xl relative
+                      border border-white/10 backdrop-blur-md
+                      bg-white/10 hover:bg-white/20 transition
+                      cursor-pointer
+                    "
+                  >
+                    {/* תצוגת סטטוס */}
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-white font-semibold flex items-center gap-2">
+                        <Truck size={20} className="text-emerald-300" />
+                        הובלה #{order.id.slice(0, 5)}
+                      </span>
+
+                      {!t.expired ? (
+                        t.urgent ? (
+                          <span className="text-red-400 text-sm flex items-center gap-1">
+                            <AlertCircle size={16} />
+                            דחוף
+                          </span>
+                        ) : (
+                          <span className="text-emerald-400 text-sm flex items-center gap-1">
+                            <Activity size={16} />
+                            פעיל
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-gray-400 text-sm flex items-center gap-1">
+                          <CheckCheck size={16} />
+                          בוצע / חלף
+                        </span>
+                      )}
+                    </div>
+
+                    {/* מידע */}
+                    <div className="space-y-2 text-white">
+                      <p className="font-semibold text-lg">{order.client_info}</p>
+
+                      <div className="flex items-center gap-2 text-gray-200">
+                        <MapPin size={18} className="text-blue-300" />
+                        {order.location}
+                      </div>
+
+                      {/* טיימר */}
+                      <div className="flex items-center gap-2 text-gray-200">
+                        <Clock size={18} className="text-yellow-300" />
+                        {!t.expired ? (
+                          <span className="font-bold text-xl">
+                            {String(t.h).padStart(2, '0')}:
+                            {String(t.m).padStart(2, '0')}:
+                            {String(t.s).padStart(2, '0')}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">המשימה הסתיימה</span>
+                        )}
+                      </div>
+
+                      <p className="text-gray-300">שעת אספקה: {order.order_time}</p>
+                    </div>
+
+                    {/* נהג מבצע */}
+                    <div className="flex items-center gap-3 mt-4">
+                      <img
+                        src={driverImg}
+                        className="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-400 shadow-md"
+                      />
+                      <div>
+                        <p className="text-white font-semibold">נהג מבצע</p>
+                        <p className="text-gray-300">{order.driver_name}</p>
+                      </div>
+                    </div>
+
+                    {/* כפתור AI */}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      className="
+                        mt-5 w-full flex items-center justify-center gap-2
+                        bg-[#00c89d]/80 hover:bg-[#00c89d]
+                        text-black font-bold py-2 rounded-xl
+                        shadow-inner
+                      "
+                    >
+                      <Bot size={20} />
+                      עריכה עם AI
+                    </motion.button>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <p className="text-gray-300 text-lg">אין משימות פעילות להיום</p>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </Layout>
+
+      {/* עיצוב Glass */}
+      <style>{`
+        .glass-card {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 16px;
+          backdrop-filter: blur(10px);
+        }
+      `}</style>
+    </AppLayout>
   );
 }
