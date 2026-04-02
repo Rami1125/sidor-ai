@@ -3,6 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
+
+// קומפוננטות תצוגה
+import AnimatedOrderCard from '../../components/AnimatedOrderCard';
+import BottomSheet from '../../components/BottomSheet';
+import WarehouseLogos from '../../components/WarehouseLogos';
+import ContainerDetails from '../../components/ContainerDetails';
 import ChatPopup from '../../components/ChatPopup2';
 
 // אייקונים
@@ -10,20 +16,13 @@ import {
   Clock,
   MapPin,
   Truck,
-  Box,
-  Activity,
-  Check,
   Bot,
+  Activity,
   AlertCircle,
-  ChevronDown
+  Check
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
-
-import AnimatedOrderCard from '../../components/AnimatedOrderCard';
-import BottomSheet from '../../components/BottomSheet';
-import WarehouseLogos from '../../components/WarehouseLogos';
-import ContainerDetails from '../../components/ContainerDetails';
 
 export default function LiveDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -31,7 +30,11 @@ export default function LiveDashboard() {
   const [containers, setContainers] = useState<any[]>([]);
   const [now, setNow] = useState(new Date());
   const [activeOrder, setActiveOrder] = useState<any | null>(null);
+  const [showChat, setShowChat] = useState(false);
 
+  // ============================
+  // ✅ LIVE SYNC + FETCH
+  // ============================
   useEffect(() => {
     setMounted(true);
     fetchData();
@@ -52,15 +55,13 @@ export default function LiveDashboard() {
   const fetchData = async () => {
     const today = new Date().toLocaleDateString('en-CA');
 
-    // Orders
     const { data: orderData } = await supabase
       .from('orders')
       .select('*')
       .eq('delivery_date', today)
       .neq('status', 'deleted')
-      .order('order_time', { ascending: true });
+      .order('order_time');
 
-    // Containers
     const { data: containerData } = await supabase
       .from('container_management')
       .select('*')
@@ -70,29 +71,15 @@ export default function LiveDashboard() {
     setContainers(containerData ?? []);
   };
 
+  // ============================
+  // ✅ התאמת מכולה להזמנה
+  // ============================
   const getContainerInfo = (order) => {
-    // התאמת מכולה לפי שם לקוח / ID
     return containers.find((c) =>
       c.client_name?.includes(order.client_info?.split('/')[0]) ||
       c.order_number === order.order_number
     );
   };
-
-<button
-  onClick={(e) => {
-    e.stopPropagation();
-    console.log("✅ AI BUTTON CLICKED");
-  }}
-  className="
-    sticky bottom-0 
-    bg-blue-600 hover:bg-blue-700 
-    text-white py-3 px-6 rounded-full 
-    shadow-xl w-full text-lg font-bold
-    z-[100000]
-  "
->
-  עדכן באמצעות AI
-</button>
 
   const onCardClick = (order) => {
     const containerInfo = getContainerInfo(order);
@@ -101,6 +88,7 @@ export default function LiveDashboard() {
 
   const closeBottomSheet = () => {
     setActiveOrder(null);
+    setShowChat(false);
   };
 
   if (!mounted) return null;
@@ -113,7 +101,9 @@ export default function LiveDashboard() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold text-blue-800">לוח משימות LIVE</h1>
-            <p className="text-gray-600">הצגת כל ההזמנות • מכולות • מחסנים • חיבור AI</p>
+            <p className="text-gray-600">
+              הצגת כל ההזמנות • מכולות • מחסנים • AI Supervisor
+            </p>
           </div>
 
           <div className="text-right">
@@ -137,11 +127,12 @@ export default function LiveDashboard() {
           </AnimatePresence>
         </div>
 
-        {/* BOTTOM SHEET DETAILS */}
+        {/* BOTTOM SHEET */}
         <AnimatePresence>
           {activeOrder && (
             <BottomSheet onClose={closeBottomSheet}>
-              {/* תוכן מלא בתוך החלון המתגלש */}
+              
+              {/* HEADER */}
               <div className="mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">
                   {activeOrder.client_info}
@@ -149,8 +140,9 @@ export default function LiveDashboard() {
                 <p className="text-gray-500">{activeOrder.location}</p>
               </div>
 
+              {/* DETAILS */}
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 text-gray-700">
                   <Clock className="text-yellow-600" />
                   <span className="font-semibold">
                     שעת אספקה: {activeOrder.order_time}
@@ -158,34 +150,50 @@ export default function LiveDashboard() {
                 </div>
 
                 {activeOrder.warehouse && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 text-gray-700">
                     {WarehouseLogos(activeOrder.warehouse)}
                     <span className="font-semibold">{activeOrder.warehouse}</span>
                   </div>
                 )}
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 text-gray-700">
                   <Truck className="text-blue-600" />
                   <span>{activeOrder.driver_name}</span>
                 </div>
               </div>
 
-              {/* פרטי מכולה */}
+              {/* CONTAINER DETAILS */}
               {activeOrder.containerInfo && (
                 <ContainerDetails container={activeOrder.containerInfo} />
               )}
 
-              {/* כפתור AI */}
-              <button className="
-                fixed bottom-5 left-1/2 -translate-x-1/2
-                bg-blue-600 hover:bg-blue-700 text-white
-                px-6 py-3 rounded-full shadow-xl 
-                flex items-center gap-2 text-lg font-bold
-              ">
-                <Bot size={22} />
-                עדכן באמצעות AI
-              </button>
+              {/* AI BUTTON */}
+              <div className="absolute bottom-4 left-0 w-full px-6">
+                <button
+                  onClick={() => setShowChat(true)}
+                  className="
+                    bg-blue-600 hover:bg-blue-700 
+                    text-white font-bold 
+                    w-full py-3 rounded-full 
+                    shadow-xl text-lg flex items-center justify-center gap-2
+                  "
+                >
+                  <Bot size={22} />
+                  עדכן באמצעות AI
+                </button>
+              </div>
+
             </BottomSheet>
+          )}
+        </AnimatePresence>
+
+        {/* CHAT POPUP */}
+        <AnimatePresence>
+          {showChat && (
+            <ChatPopup
+              order={activeOrder}
+              onClose={() => setShowChat(false)}
+            />
           )}
         </AnimatePresence>
 
