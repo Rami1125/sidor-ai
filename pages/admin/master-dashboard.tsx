@@ -1,31 +1,18 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
-
-// אייקונים קיימים — ללא שינוי
-import {
-  Clock,
-  MapPin,
-  Truck,
-  Box,
-  Activity,
-  CheckCheck,
-  Bot,
-  AlertCircle
+import { 
+  Clock, MapPin, Truck, Box, Activity, CheckCheck, Bot, AlertCircle 
 } from 'lucide-react';
-
 import { motion, AnimatePresence } from 'framer-motion';
 
-// נהגים – ללא שינוי
 const DRIVERS = [
   { name: 'חכמת', img: 'https://i.postimg.cc/d3S0NJJZ/Screenshot-20250623-200646-Facebook.jpg' },
   { name: 'עלי', img: 'https://i.postimg.cc/tCNbgXK3/Screenshot-20250623-200744-Tik-Tok.jpg' }
 ];
 
-const RAMI_AVATAR =
-  "https://media-mrs2-2.cdn.whatsapp.net/v/t61.24694-24/620186722_866557896271587_5747987865837500471_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AG_JCByU59rXu4ybPiRgaD2riDMbb0ujm-XlzxUbmgPXA&oe=69D7EBEB&_nc_sid=5e03e0&_nc_cat=111";
+const RAMI_AVATAR = "https://media-mrs2-2.cdn.whatsapp.net/v/t61.24694-24/620186722_866557896271587_5747987865837500471_n.jpg?stp=dst-jpg_s96x96_tt6&ccb=11-4&oh=01_Q5Aa4AG_JCByU59rXu4ybPiRgaD2riDMbb0ujm-XlzxUbmgPXA&oe=69D7EBEB&_nc_sid=5e03e0&_nc_cat=111";
 
 export default function SabanDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -35,16 +22,11 @@ export default function SabanDashboard() {
   useEffect(() => {
     setMounted(true);
     fetchData();
-
     const t = setInterval(() => setNow(new Date()), 1000);
 
     const channel = supabase
       .channel('dashboard_live')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        fetchData
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchData)
       .subscribe();
 
     return () => {
@@ -54,167 +36,130 @@ export default function SabanDashboard() {
   }, []);
 
   const fetchData = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA'); // מבטיח פורמט YYYY-MM-DD
     const { data } = await supabase
       .from('orders')
       .select('*')
       .eq('delivery_date', today)
-      .neq('status', 'deleted');
+      .neq('status', 'deleted')
+      .order('order_time', { ascending: true });
 
     setOrders(data ?? []);
   };
 
-  const calculateTime = (target: string) => {
-    const diff = new Date(target).getTime() - now.getTime();
+  const calculateTime = (dateStr: string, timeStr: string) => {
+    if (!timeStr) return { expired: true };
+    const target = new Date(`${dateStr.replace(/-/g, '/')} ${timeStr}`);
+    const diff = target.getTime() - now.getTime();
+    
     if (diff <= 0) return { expired: true };
 
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
 
-    return { expired: false, h, m, s, urgent: diff < 3600000 };
+    return { 
+      expired: false, 
+      h, m, s, 
+      urgent: diff < 3600000 // פחות משעה נהיה אדום
+    };
   };
 
   if (!mounted) return null;
 
   return (
     <AppLayout>
-      <div dir="rtl" className="p-6 w-full">
+      <div dir="rtl" className="p-6 w-full min-h-screen bg-[#0a0f18] text-white">
         
-        {/* כותרת הדשבורד */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Header עם אפקט גלואו */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-[#00c89d]">לוח משימות LIVE</h2>
-            <p className="text-gray-400 mt-1">מחובר בזמן אמת למאגר המרכזי</p>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
+              <h2 className="text-4xl font-black italic tracking-tighter text-emerald-400">לוח משימות LIVE</h2>
+            </div>
+            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-2">Saban OS Logistics Interface</p>
           </div>
 
-          {/* זמן ושעה */}
-          <div className="text-right">
-            <p className="text-2xl font-semibold text-white">{now.toLocaleTimeString('he-IL')}</p>
-            <p className="text-gray-400">{new Date().toLocaleDateString('he-IL')}</p>
+          <div className="bg-slate-900/50 backdrop-blur-xl p-4 rounded-3xl border border-white/5 text-center min-w-[180px] shadow-2xl">
+            <p className="text-2xl font-black font-mono text-emerald-400">{now.toLocaleTimeString('he-IL')}</p>
+            <p className="text-slate-500 text-xs font-bold uppercase">{new Date().toLocaleDateString('he-IL')}</p>
           </div>
         </div>
 
-        {/* גריד כרטיסים */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          <AnimatePresence>
+        {/* Grid המשימות */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <AnimatePresence mode="popLayout">
             {orders.length > 0 ? (
               orders.map((order) => {
-                const t = calculateTime(`${order.delivery_date}T${order.order_time}`);
-
-                const driverImg =
-                  DRIVERS.find((d) => d.name === order.driver_name)?.img || RAMI_AVATAR;
+                const t = calculateTime(order.delivery_date, order.order_time);
+                const driver = DRIVERS.find(d => d.name === order.driver_name);
+                const driverImg = driver?.img || RAMI_AVATAR;
 
                 return (
                   <motion.div
                     key={order.id}
                     layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="
-                      glass-card rounded-xl p-5 shadow-xl relative
-                      border border-white/10 backdrop-blur-md
-                      bg-white/10 hover:bg-white/20 transition
-                      cursor-pointer
-                    "
+                    className="group relative bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-6 border border-white/10 hover:border-emerald-500/50 transition-all duration-500 shadow-2xl"
                   >
-                    {/* תצוגת סטטוס */}
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-white font-semibold flex items-center gap-2">
-                        <Truck size={20} className="text-emerald-300" />
-                        הובלה #{order.id.slice(0, 5)}
-                      </span>
+                    {/* אינדיקטור דחיפות צדדי */}
+                    <div className={`absolute top-0 right-0 w-2 h-full rounded-l-full transition-colors ${t.urgent && !t.expired ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-emerald-500'}`} />
 
-                      {!t.expired ? (
-                        t.urgent ? (
-                          <span className="text-red-400 text-sm flex items-center gap-1">
-                            <AlertCircle size={16} />
-                            דחוף
-                          </span>
-                        ) : (
-                          <span className="text-emerald-400 text-sm flex items-center gap-1">
-                            <Activity size={16} />
-                            פעיל
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-gray-400 text-sm flex items-center gap-1">
-                          <CheckCheck size={16} />
-                          בוצע / חלף
-                        </span>
-                      )}
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="p-3 bg-white/5 rounded-2xl">
+                        <Truck size={24} className="text-emerald-400" />
+                      </div>
+                      <div className="text-left font-mono text-[10px] text-slate-500">ID: {order.id.slice(0, 8)}</div>
                     </div>
 
-                    {/* מידע */}
-                    <div className="space-y-2 text-white">
-                      <p className="font-semibold text-lg">{order.client_info}</p>
-
-                      <div className="flex items-center gap-2 text-gray-200">
-                        <MapPin size={18} className="text-blue-300" />
-                        {order.location}
-                      </div>
-
-                      {/* טיימר */}
-                      <div className="flex items-center gap-2 text-gray-200">
-                        <Clock size={18} className="text-yellow-300" />
-                        {!t.expired ? (
-                          <span className="font-bold text-xl">
-                            {String(t.h).padStart(2, '0')}:
-                            {String(t.m).padStart(2, '0')}:
-                            {String(t.s).padStart(2, '0')}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">המשימה הסתיימה</span>
-                        )}
-                      </div>
-
-                      <p className="text-gray-300">שעת אספקה: {order.order_time}</p>
+                    <h3 className="text-2xl font-black mb-1 truncate">{order.client_info}</h3>
+                    <div className="flex items-center gap-2 text-slate-400 text-sm mb-6">
+                      <MapPin size={16} className="text-emerald-500" /> {order.location}
                     </div>
 
-                    {/* נהג מבצע */}
-                    <div className="flex items-center gap-3 mt-4">
-                      <img
-                        src={driverImg}
-                        className="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-400 shadow-md"
-                      />
+                    {/* טיימר מעוצב */}
+                    <div className={`p-4 rounded-3xl mb-6 flex items-center justify-between ${t.urgent && !t.expired ? 'bg-red-500/10 border border-red-500/20' : 'bg-emerald-500/10 border border-emerald-500/20'}`}>
+                      <div className="flex items-center gap-2 text-slate-300 font-bold text-xs">
+                        <Clock size={16} /> זמן נותר:
+                      </div>
+                      <div className={`text-2xl font-black font-mono ${t.urgent && !t.expired ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {!t.expired ? `${String(t.h).padStart(2, '0')}:${String(t.m).padStart(2, '0')}:${String(t.s).padStart(2, '0')}` : "הסתיים"}
+                      </div>
+                    </div>
+
+                    {/* נהג */}
+                    <div className="flex items-center gap-4 bg-white/5 p-3 rounded-2xl border border-white/5">
+                      <img src={driverImg} className="w-12 h-12 rounded-xl object-cover border border-emerald-500/30" />
                       <div>
-                        <p className="text-white font-semibold">נהג מבצע</p>
-                        <p className="text-gray-300">{order.driver_name}</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase">נהג מבצע</p>
+                        <p className="text-sm font-black italic">{order.driver_name}</p>
+                      </div>
+                      <div className="mr-auto">
+                        <Activity size={18} className={t.expired ? 'text-slate-600' : 'text-emerald-500 animate-pulse'} />
                       </div>
                     </div>
 
-                    {/* כפתור AI */}
                     <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      className="
-                        mt-5 w-full flex items-center justify-center gap-2
-                        bg-[#00c89d]/80 hover:bg-[#00c89d]
-                        text-black font-bold py-2 rounded-xl
-                        shadow-inner
-                      "
+                      whileTap={{ scale: 0.95 }}
+                      className="mt-6 w-full py-4 bg-emerald-500 text-black font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/20"
                     >
-                      <Bot size={20} />
-                      עריכה עם AI
+                      <Bot size={20} /> AI COMMAND
                     </motion.button>
                   </motion.div>
                 );
               })
             ) : (
-              <p className="text-gray-300 text-lg">אין משימות פעילות להיום</p>
+              <div className="col-span-full py-20 text-center opacity-20">
+                <AlertCircle size={64} className="mx-auto mb-4" />
+                <p className="text-3xl font-black italic uppercase">אין משימות להיום</p>
+              </div>
             )}
           </AnimatePresence>
         </div>
       </div>
-
-      {/* עיצוב Glass */}
-      <style>{`
-        .glass-card {
-          background: rgba(255, 255, 255, 0.12);
-          border-radius: 16px;
-          backdrop-filter: blur(10px);
-        }
-      `}</style>
-    </AppLayout>
+    </Layout>
   );
 }
