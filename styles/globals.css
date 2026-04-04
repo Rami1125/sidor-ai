@@ -1,7 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+@import "tailwindcss";
 body {
   background-color: #e5ddd5; /* רקע וואטסאפ קלאסי */
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
