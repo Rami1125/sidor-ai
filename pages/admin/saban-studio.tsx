@@ -151,7 +151,7 @@ export default function SabanStudio() {
             <button onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-800 rounded-full text-slate-400"><X size={24}/></button>
           </header>
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <Field label="שם מוצר" value={editingProduct.product_name} onChange={v => setEditingProduct({...editingProduct, product_name: v})} />
+            <Field label="שם מוצר" value={editingProduct.product_name} onChange={(v: any) => setEditingProduct({...editingProduct, product_name: v})} />
             <div className="grid grid-cols-2 gap-4">
               <Field label="מחיר (₪)" type="number" value={editingProduct.price} onChange={v => setEditingProduct({...editingProduct, price: v})} />
               <Field label="מק״ט" value={editingProduct.sku} onChange={v => setEditingProduct({...editingProduct, sku: v})} />
