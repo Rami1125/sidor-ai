@@ -58,10 +58,13 @@ export default function Commander() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col italic" dir="rtl">
-      <Head>
-        <title>COMMANDER | SABAN OS</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-      </Head>
+<Head>
+  <title>לוח הזמנות</title>
+  {/* התיקון לאזהרה שקיבלת */}
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+</Head>
 
       {/* Header יוקרתי - עיצוב היברידי */}
       <header className="bg-white border-b border-slate-100 p-6 sticky top-0 z-50 flex justify-between items-center shadow-sm">
