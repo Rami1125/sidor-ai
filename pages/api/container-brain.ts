@@ -1,70 +1,74 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   
   const { message, senderPhone } = req.body;
+  const cleanMsg = (message || "").trim();
   const phone = senderPhone?.replace('@c.us', '') || 'unknown';
   const geminiKey = process.env.GEMINI_API_KEY;
 
   try {
-    // 1. בדיקת מכולה קיימת אצל הלקוח
-    const { data: activeContainer } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('is_container', true)
-      .ilike('client_info', `%${phone}%`)
-      .neq('status', 'removed')
-      .maybeSingle();
+    // 1. שליפת זיכרון והזמנה קיימת
+    let { data: memory } = await supabase.from('customer_memory').select('*').eq('clientId', phone).maybeSingle();
+    let { data: lastOrder } = await supabase.from('orders').select('*').ilike('client_info', `%${phone}%`).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    
+    let currentUserName = memory?.user_name || "";
+    let chatHistory = memory?.accumulated_knowledge || "";
 
-    // 2. לוגיקת ימי שכירות (אם יש מכולה)
-    let rentalInfo = "";
-    if (activeContainer) {
-      const daysDiff = Math.floor((Date.now() - new Date(activeContainer.created_at).getTime()) / (1000 * 60 * 60 * 24));
-      rentalInfo = `המכולה אצלו כבר ${daysDiff} ימים. (שכירות חינם עד 10 ימים).`;
+    // 2. חישוב ימי שכירות מכולה (אם יש)
+    let rentalStatus = "";
+    if (lastOrder && (lastOrder as any).is_container) {
+      const days = Math.floor((Date.now() - new Date(lastOrder.created_at).getTime()) / (1000 * 60 * 60 * 24));
+      rentalStatus = `המכולה אצל הלקוח ${days} ימים.`;
+    }
+
+    // 3. חיפוש מוצר (השורה שתוקנה)
+    const searchWords = cleanMsg.split(/\s+/).filter((word: string) => word.length >= 3);
+    let inventoryData = "";
+    if (searchWords.length > 0) {
+      const { data: exact } = await supabase.from('brain_inventory').select('*').or(`sku.eq.${cleanMsg},product_name.ilike.%${cleanMsg}%`).limit(1).maybeSingle();
+      if (exact) inventoryData = `מוצר במלאי: ${exact.product_name}, מק"ט: ${exact.sku}.`;
     }
 
     const prompt = `
-      זהות: אתה סדרן המכולות של "ח.סבן". מקצועי ותמציתי.
-      מידע לוגיסטי: ${activeContainer ? "לקוח עם מכולה פעילה בכתובת: " + activeContainer.warehouse : "לקוח חדש"}.
-      מצב שכירות: ${rentalInfo}
-
-      חוקי מכולות:
-      1. לקוח קיים: הצעה להחלפה (מלאה בחדשה) או הוצאה (פינוי).
-      2. לקוח חדש: פינג-פונג "פרטי או ציבורי?".
-      3. הרצליה/כ"ס/רעננה: אזהרת קנס 800 ש"ח + איסור סופ"ש (פינוי בשישי ב-14:00). לינק להיתר: https://www.herzliya.muni.il/טופס-הצבת-מכולות/
-      4. יום 9: אם הלקוח שואל, ציין שמחר נגמרת השכירות החינמית.
-
-      הודעה: "${message}"
-      פקודות: CONTAINER_OP:[הצבה/החלפה/הוצאה]
+      זהות: סדרן "ח.סבן". 
+      לקוח: ${currentUserName || 'אורח'}.
+      סטטוס מכולה: ${rentalStatus}
+      נתוני מלאי: ${inventoryData}
+      
+      משימות:
+      - בירור סטטוס הזמנה (שעה ונהג).
+      - הצבת/החלפת/הוצאת מכולה (שכירות 10 ימים, אזהרת קנס בהרצליה).
+      - הוספת מוצרי בנייה (SAVE_ORDER_DB:[SKU]:[QTY]).
+      
+      הודעת לקוח: "${cleanMsg}"
     `;
 
+    // קריאה ל-Gemini
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
-    
     const data = await response.json();
-    let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "אחי, שלח שוב.";
+    let replyText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "אחי, נסה שוב.";
 
-    // 3. הזרקה לטבלה במקרה של זיהוי פעולה
-    if (reply.includes("CONTAINER_OP:")) {
-      const type = reply.match(/CONTAINER_OP:\[?(.*?)\]?/)?.[1] || "הצבה";
-      await supabase.from('orders').insert([{
-        client_info: `מכולה | ${phone}`,
-        warehouse: `מכולה 8 קוב - ${type}`,
-        is_container: true,
-        status: 'pending',
-        order_time: new Date().toLocaleTimeString('he-IL')
-      }]);
-    }
+    // עדכון זיכרון
+    await supabase.from('customer_memory').upsert({
+      clientId: phone, 
+      accumulated_knowledge: (chatHistory + "\n" + cleanMsg).slice(-1000)
+    }, { onConflict: 'clientId' });
 
-    return res.status(200).json({ reply: reply.replace(/CONTAINER_OP:.*?/g, "").trim() });
+    return res.status(200).json({ reply: replyText.replace(/\[.*?\]/g, "").trim() });
+
   } catch (e) {
-    return res.status(500).json({ error: "API Error" });
+    return res.status(200).json({ reply: "מצטער, חלה שגיאה במוח." });
   }
 }
