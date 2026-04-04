@@ -1,133 +1,114 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import AppLayout from '../components/Layout';
-import { processCommanderCommand } from '../lib/ai-commander-core';
-// הוספתי את Cpu לרשימת האייקונים כאן למטה
-import { 
-  Send, Cpu, MessageSquare, Zap, Truck, Box, History, LayoutDashboard 
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import OrderBoard from '../components/OrderBoard';
+import { createClient } from '@supabase/supabase-js';
+import OrderBoard from '@/components/OrderBoard'; // ייבוא הלוח החדש
+import { ShoppingBag, BellRing, Settings, ShieldCheck } from 'lucide-react';
 
-export default function CommanderPage() {
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [aiResponse, setAiResponse] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'warehouse' | 'containers'>('all');
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  const typeWriter = (text: string) => {
-    setAiResponse('');
-    const words = text.split(' ');
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < words.length) {
-        setAiResponse((prev) => prev + (i === 0 ? '' : ' ') + words[i]);
-        i++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 70); 
+export default function Commander() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // שליפת נתונים ראשונית וחיבור ל-Realtime
+  useEffect(() => {
+    fetchOrders();
+
+    const channel = supabase
+      .channel('commander-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchOrders();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchOrders = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setOrders(data);
+    }
+    setLoading(false);
   };
 
-  const handleCommand = async () => {
-    if (!input.trim()) return;
-    const currentInput = input;
-    setInput('');
-    setIsTyping(true);
-    setAiResponse('');
-
+  // פונקציית העדכון שהלוח דורש
+  const handleUpdate = async (id: string, updates: any) => {
     try {
-      const response = await processCommanderCommand(currentInput, 'ראמי מסארווה');
-      if (response && response.msg) {
-        typeWriter(response.msg);
-      } else {
-        typeWriter("בוס, המוח לא החזיר תשובה תקינה.");
-      }
+      const res = await fetch('/api/update-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, updates })
+      });
+      if (res.ok) fetchOrders();
     } catch (err) {
-      typeWriter("שגיאה בתקשורת עם ה-Database.");
-    } finally {
-      setIsTyping(false);
+      console.error("Commander Update Error:", err);
     }
   };
 
   return (
-    <AppLayout>
-      <div className="h-[calc(100vh-64px)] bg-[#F8F9FA] flex overflow-hidden font-sans antialiased" dir="rtl">
-        <Head>
-          <title>SABAN OS | COMMANDER</title>
-        </Head>
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col italic" dir="rtl">
+      <Head>
+        <title>COMMANDER | SABAN OS</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+      </Head>
 
-        {/* Sidebar ניווט מהיר */}
-        <nav className="w-20 lg:w-24 bg-slate-950 flex flex-col items-center py-8 gap-8 border-l border-slate-800 z-50">
-          <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 cursor-pointer transition-all hover:rotate-90">
-            <Cpu className="text-white" size={24} />
+      {/* Header יוקרתי - עיצוב היברידי */}
+      <header className="bg-white border-b border-slate-100 p-6 sticky top-0 z-50 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="bg-slate-900 p-3 rounded-2xl shadow-lg">
+            <ShieldCheck className="text-emerald-400" size={24} />
           </div>
-          
-          <div className="flex flex-col gap-8 mt-10">
-            <button onClick={() => setActiveTab('warehouse')} className={`p-4 rounded-2xl transition-all ${activeTab === 'warehouse' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500'}`}>
-              <Truck size={24} />
-            </button>
-            <button onClick={() => setActiveTab('containers')} className={`p-4 rounded-2xl transition-all ${activeTab === 'containers' ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'}`}>
-              <Box size={24} />
-            </button>
-            <button onClick={() => setActiveTab('all')} className={`p-4 rounded-2xl transition-all ${activeTab === 'all' ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-500'}`}>
-              <LayoutDashboard size={24} />
-            </button>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none italic">
+              SABAN <span className="text-emerald-500">COMMANDER</span>
+            </h1>
+            <p className="text-[9px] font-bold text-slate-400 tracking-[0.3em] uppercase mt-1">Operational Control Tower</p>
           </div>
-        </nav>
+        </div>
 
-        <main className="flex-1 flex flex-col lg:flex-row h-full">
-          {/* צ'אט AI */}
-          <section className="w-full lg:w-[420px] border-l border-slate-200 bg-white flex flex-col shadow-2xl z-40">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
-              <div className="flex items-center gap-2 italic font-black">
-                <Zap className="text-emerald-400" size={20} />
-                COMMANDER AI
-              </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="bg-slate-50 border border-slate-100 px-5 py-2 rounded-2xl flex items-center gap-3 shadow-inner">
+            <BellRing className="text-slate-400" size={18} />
+            <span className="text-lg font-black text-slate-900">{orders.filter(o => o.status === 'pending').length}</span>
+          </div>
+          <button className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl active:scale-95 transition-all">
+            <Settings size={20} />
+          </button>
+        </div>
+      </header>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
-              <AnimatePresence>
-                {aiResponse && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900 text-emerald-400 p-5 rounded-[2rem] rounded-tr-none shadow-xl font-bold text-sm leading-relaxed border-r-4 border-emerald-500">
-                    {aiResponse}
-                  </motion.div>
-                )}
-                {isTyping && (
-                  <div className="flex gap-2 p-4 justify-center">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  </div>
-                )}
-              </AnimatePresence>
-            </div>
+      {/* אזור הלוח */}
+      <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+        <section className="mb-8">
+          <div className="flex items-center justify-between mb-6 px-2">
+            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] italic">לוח הזמנות פעיל</h2>
+            <div className="h-px flex-1 bg-slate-100 mx-4" />
+          </div>
 
-            <div className="p-6 bg-white border-t border-slate-100">
-              <div className="relative group">
-                <input 
-                  value={input} onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCommand()}
-                  placeholder="פקודה למפקד..."
-                  className="w-full bg-slate-100 p-5 rounded-[1.5rem] border-none font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner"
-                />
-                <button onClick={handleCommand} className="absolute left-3 top-1/2 -translate-y-1/2 p-3 bg-slate-900 text-emerald-400 rounded-xl shadow-lg active:scale-90 transition-all">
-                  <Send size={20} className="rotate-180" />
-                </button>
-              </div>
-            </div>
-          </section>
+          {/* התיקון כאן: הזרקת ה-Orders וה-onUpdate לתוך הלוח */}
+          {loading ? (
+            <div className="flex justify-center p-20 animate-pulse text-slate-300 font-black italic uppercase">Synchronizing...</div>
+          ) : (
+            <OrderBoard orders={orders} onUpdate={handleUpdate} />
+          )}
+        </section>
+      </main>
 
-          {/* לוח סידור */}
-          <section className="flex-1 bg-[#F8F9FA] p-6 lg:p-10 overflow-y-auto">
-            <header className="mb-10">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">SABAN <span className="text-emerald-500">OS</span></h1>
-            </header>
-            <OrderBoard />
-          </section>
-        </main>
-      </div>
-    </AppLayout>
+      <style jsx global>{`
+        body { background: #F8FAFC; margin: 0; }
+        ::-webkit-scrollbar { width: 0px; }
+      `}</style>
+    </div>
   );
 }
