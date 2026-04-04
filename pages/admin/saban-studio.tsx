@@ -153,16 +153,16 @@ export default function SabanStudio() {
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <Field label="שם מוצר" value={editingProduct.product_name} onChange={(v: any) => setEditingProduct({...editingProduct, product_name: v})} />
             <div className="grid grid-cols-2 gap-4">
-              <Field label="מחיר (₪)" type="number" value={editingProduct.price} onChange={v => setEditingProduct({...editingProduct, price: v})} />
-              <Field label="מק״ט" value={editingProduct.sku} onChange={v => setEditingProduct({...editingProduct, sku: v})} />
+              <Field label="מחיר (₪)" type="number" value={editingProduct.price} onChange={(v: any) => setEditingProduct({...editingProduct, price: v})} />
+              <Field label="מק״ט" value={editingProduct.sku} onChange={(v: any) => setEditingProduct({...editingProduct, sku: v})} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="ייבוש" value={editingProduct.dry_time} onChange={v => setEditingProduct({...editingProduct, dry_time: v})} />
-              <Field label="כיסוי" value={editingProduct.coverage_rate} onChange={v => setEditingProduct({...editingProduct, coverage_rate: v})} />
+              <Field label="ייבוש" value={editingProduct.dry_time} onChange={(v: any) => setEditingProduct({...editingProduct, dry_time: v})} />
+              <Field label="כיסוי" value={editingProduct.coverage_rate} onChange={(v: any) => setEditingProduct({...editingProduct, coverage_rate: v})} />
             </div>
             <textarea 
               className="w-full p-4 bg-slate-800 rounded-[1.5rem] outline-none font-bold text-white min-h-[120px]"
-              value={editingProduct.description}
+              value={editingProduct.description || ''}
               onChange={e => setEditingProduct({...editingProduct, description: e.target.value})}
               placeholder="מפרט טכני..."
             />
