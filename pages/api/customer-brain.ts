@@ -8,11 +8,10 @@ const supabase = createClient(
 
 // שימוש במודלים המעודכנים ביותר לאפריל 2026 (כולל פתרון ל-Rotation)
 // pages/api/customer-brain.ts
-const modelPool = [
-  "gemini-3.1-flash-lite-preview", // המודל הכי יציב כרגע
-  "gemini-3.1-pro-preview",
-  "gemini-2.0-flash"
-];
+    "gemini-3.1-flash-lite-preview",
+    "gemini-2.0-pro-exp-02-05", 
+    "gemini-2.0-flash"
+  ];
 
 const MUNICIPALITY_RULES: any = {
   "תל אביב": { link: "https://bit.ly/tlv-container", alert: "חובה לפנות בשישי עד 10:00. קנס: ~730 ש\"ח." },
