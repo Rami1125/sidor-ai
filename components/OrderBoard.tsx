@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Truck, Clock, CheckCircle, Package, Eye, 
-  MessageSquare, AlertCircle, RefreshCw, LogOut, ExternalLink, Printer, Share2, Hash, Edit3, User, Save
+  MessageSquare, AlertCircle, RefreshCw, LogOut, ExternalLink, Printer, Share2, Hash, Edit3, User, Save, MapPin, Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -11,6 +11,9 @@ interface Order {
   order_number: number;
   comax_number?: string;
   client_info: string;
+  customer_contact?: string; // איש קשר
+  delivery_address?: string; // כתובת אספקה
+  customer_id?: string;      // מספר לקוח
   product_name: string;
   warehouse: string;
   status: string;
@@ -25,35 +28,15 @@ interface Order {
 
 export default function OrderBoard({ orders, onUpdate }: { orders: Order[], onUpdate: (id: string, updates: any) => void }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editingClientId, setEditingClientId] = useState<string | null>(null);
-  const [tempClientInfo, setTempClientInfo] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevOrdersCount = useRef(orders.length);
 
   useEffect(() => {
     const hasNewOrder = orders.length > prevOrdersCount.current;
-    const hasNewNote = orders.some(o => o.has_new_note);
-    if (hasNewOrder || hasNewNote) {
-      audioRef.current?.play().catch(() => {});
-    }
+    if (hasNewOrder) audioRef.current?.play().catch(() => {});
     prevOrdersCount.current = orders.length;
   }, [orders]);
-
-  const handlePrint = (order: Order) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <div dir="rtl" style="font-family: sans-serif; padding: 30px;">
-        <h1 style="border-bottom: 4px solid #000; padding-bottom: 10px;">ח. סבן - פקודת ליקוט #${order.order_number}</h1>
-        <p><strong>קומקס:</strong> ${order.comax_number || '---'}</p>
-        <p><strong>לקוח:</strong> ${order.client_info}</p>
-        <hr/>
-        <pre style="font-size: 22px; font-weight: bold;">${order.warehouse}</pre>
-      </div>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -61,109 +44,118 @@ export default function OrderBoard({ orders, onUpdate }: { orders: Order[], onUp
       
       <AnimatePresence mode="popLayout">
         {orders.map((order) => {
-          const days = order.is_container ? Math.floor((Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0;
-          const isRentalAlert = order.is_container && days >= 9;
-          const isChameleon = order.has_new_note || isRentalAlert;
+          const isChameleon = order.has_new_note;
 
           return (
             <motion.div
               layout
               key={order.id}
               className={`relative rounded-[2.5rem] border-2 transition-all duration-500 overflow-hidden shadow-sm
-                ${isChameleon ? 'border-emerald-400 bg-emerald-50/50 shadow-emerald-100' : 'border-slate-100 bg-white'}`}
+                ${isChameleon ? 'border-emerald-400 bg-emerald-50/50' : 'border-slate-100 bg-white'}`}
             >
               <div className="p-5 md:p-8 flex items-center gap-4 md:gap-8">
-                {/* ID מרובע */}
-                <div className={`w-16 h-16 md:w-24 md:h-24 rounded-[2rem] flex flex-col items-center justify-center font-black italic shrink-0
-                  ${order.is_container ? 'bg-slate-900 text-blue-400' : 'bg-slate-100 text-slate-800'}`}>
-                  <span className="text-[10px] opacity-50 uppercase tracking-tighter">ID</span>
+                {/* מזהה הזמנה */}
+                <div className="w-16 h-16 md:w-24 md:h-24 rounded-[2rem] bg-slate-900 text-blue-400 flex flex-col items-center justify-center font-black italic shrink-0 shadow-lg">
+                  <span className="text-[10px] opacity-50 uppercase">ID</span>
                   <span className="text-xl md:text-3xl">#{order.order_number}</span>
                 </div>
 
                 <div className="flex-1 min-w-0 text-right">
-                  <div className="flex items-center gap-2 mb-1">
-                    {order.is_container && <span className="bg-blue-600 text-white text-[10px] px-3 py-0.5 rounded-full font-black italic uppercase">Container</span>}
-                    <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg italic">
-                      <Clock size={12}/> {order.order_time}
-                    </span>
-                  </div>
-                  
-                  <h2 className="text-2xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase truncate italic leading-none">
+                  <h2 className="text-2xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase truncate italic leading-none mb-2">
                     {order.product_name || "הזמנה כללית"}
                   </h2>
 
-                  <div className="flex flex-wrap items-center gap-3 mt-3">
-                    {/* שדה קומקס */}
-                    <div className="flex items-center gap-1 bg-slate-900 text-white px-3 py-1.5 rounded-xl shadow-lg border border-slate-700">
-                      <Hash size={12} className="text-emerald-400" />
+                  {/* שורת פרטי לקוח ועריכה */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* מספר קומקס */}
+                    <div className="flex items-center gap-1 bg-slate-900 text-emerald-400 px-3 py-1 rounded-xl text-xs font-black">
+                      <Hash size={12} />
                       <input 
-                        className="bg-transparent border-none outline-none text-xs font-black w-20 tracking-widest text-emerald-400"
-                        placeholder="קומקס..."
+                        className="bg-transparent border-none outline-none w-16"
                         defaultValue={order.comax_number}
                         onBlur={(e) => onUpdate(order.id, { comax_number: e.target.value })}
+                        placeholder="קומקס"
                       />
                     </div>
 
-                    {/* עריכת פרטי לקוח */}
-                    <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 group">
-                      <User size={14} className="text-slate-400" />
-                      {editingClientId === order.id ? (
-                        <div className="flex items-center gap-2">
-                          <input 
-                            className="bg-white border border-blue-200 outline-none text-xs font-bold px-2 py-0.5 rounded-lg w-48 text-slate-900"
-                            autoFocus
-                            value={tempClientInfo}
-                            onChange={(e) => setTempClientInfo(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    onUpdate(order.id, { client_info: tempClientInfo });
-                                    setEditingClientId(null);
-                                }
-                            }}
-                          />
-                          <button onClick={() => { onUpdate(order.id, { client_info: tempClientInfo }); setEditingClientId(null); }}>
-                            <Save size={14} className="text-blue-600" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-600">{order.client_info}</span>
-                          <button 
-                            onClick={() => { setEditingClientId(order.id); setTempClientInfo(order.client_info); }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Edit3 size={12} className="text-slate-400 hover:text-blue-600" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* כפתור פתיחת עריכה מורחבת */}
+                    <button 
+                      onClick={() => setEditingId(editingId === order.id ? null : order.id)}
+                      className={`flex items-center gap-2 px-4 py-1 rounded-xl border transition-all font-bold text-xs
+                        ${editingId === order.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'}`}
+                    >
+                      <Edit3 size={12} />
+                      {editingId === order.id ? 'סגור עריכה' : 'ערוך לקוח'}
+                    </button>
+
+                    <span className="text-slate-400 font-bold text-xs italic">{order.client_info}</span>
                   </div>
+
+                  {/* פאנל עריכת לקוח חכם - נפתח בלחיצה על ערוך לקוח */}
+                  <AnimatePresence>
+                    {editingId === order.id && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 p-4 bg-slate-50 rounded-[1.5rem] border border-slate-100">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase mr-2 italic">שם לקוח / חברה</label>
+                            <input 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400"
+                              defaultValue={order.client_info}
+                              onBlur={(e) => onUpdate(order.id, { client_info: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase mr-2 italic">איש קשר / טלפון</label>
+                            <input 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400"
+                              defaultValue={order.customer_contact}
+                              onBlur={(e) => onUpdate(order.id, { customer_contact: e.target.value })}
+                              placeholder="שם + נייד"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase mr-2 italic">מספר לקוח (קומקס)</label>
+                            <input 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400"
+                              defaultValue={order.customer_id}
+                              onBlur={(e) => onUpdate(order.id, { customer_id: e.target.value })}
+                              placeholder="מספר לקוח..."
+                            />
+                          </div>
+                          <div className="md:col-span-3 space-y-1">
+                            <label className="text-[9px] font-black text-slate-400 uppercase mr-2 italic">כתובת אספקה מלאה</label>
+                            <div className="relative">
+                              <MapPin size={14} className="absolute left-3 top-3 text-slate-300" />
+                              <input 
+                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 pr-10 text-sm font-bold outline-none focus:border-blue-400"
+                                defaultValue={order.delivery_address}
+                                onBlur={(e) => onUpdate(order.id, { delivery_address: e.target.value })}
+                                placeholder="רחוב, עיר, קומה..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                   <button onClick={() => setExpandedId(expandedId === order.id ? null : order.id)} 
-                    className={`p-4 md:p-6 rounded-3xl transition-all ${expandedId === order.id ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>
+                    className={`p-4 md:p-6 rounded-3xl transition-all ${expandedId === order.id ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400'}`}>
                     <Eye size={24}/>
                   </button>
                   <button onClick={() => onUpdate(order.id, { status: 'completed' })} 
-                    className="p-4 md:p-6 rounded-3xl bg-orange-500 text-white shadow-lg shadow-orange-200 active:scale-95 transition-all">
+                    className="p-4 md:p-6 rounded-3xl bg-orange-500 text-white shadow-lg shadow-orange-200">
                     <CheckCircle size={24}/>
                   </button>
                 </div>
               </div>
-
-              {expandedId === order.id && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 md:p-12 bg-white border-t-2 border-slate-50 space-y-8">
-                  <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                    <button onClick={() => handlePrint(order)} className="flex-1 py-6 bg-slate-900 text-white rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 shadow-xl">
-                      <Printer size={24}/> הדפסה
-                    </button>
-                    <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(order.warehouse)}`)} className="flex-1 py-6 bg-emerald-500 text-white rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 shadow-xl">
-                      <Share2 size={24}/> WhatsApp
-                    </button>
-                  </div>
-                </motion.div>
-              )}
             </motion.div>
           );
         })}
