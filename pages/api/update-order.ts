@@ -1,29 +1,55 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export const maxDuration = 60; 
-export const dynamic = 'force-dynamic';
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
-export async function POST(request: NextRequest) {
+// התיקון: חייב להיות export default כדי ש-Next.js יזהה את ה-Route
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    const body = await request.json();
-    const { fileName, fileData, mimeType, phone } = body;
+    const { orderId, newStatus, clientId } = req.body;
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzuKzJdg7B3Q0Q42IonnWlEgsE_o_Sj2dgqxpHrmU0ro-MYmlismm9LzMnpbn7y8rOj/exec";
-
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName, fileData, mimeType, phone }),
-    });
-
-    const result = await response.json();
-
-    if (result.status === 'success') {
-      return NextResponse.json({ link: result.link });
+    if (!orderId || !newStatus) {
+      return res.status(400).json({ error: 'Missing parameters' });
     }
-    return NextResponse.json({ error: result.message }, { status: 500 });
+
+    // 1. עדכון סטטוס ההזמנה בטבלת orders
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+
+    if (orderError) throw orderError;
+
+    // 2. עדכון הזיכרון של הלקוח כדי שיקבל הודעה בצאט
+    if (clientId) {
+      const statusMessage = `\n[SYSTEM]: סטטוס ההזמנה שלך עודכן ל: ${newStatus}`;
+      
+      // שליפת הזיכרון הקיים
+      const { data: memory } = await supabase
+        .from('customer_memory')
+        .select('accumulated_knowledge')
+        .eq('clientId', clientId)
+        .maybeSingle();
+
+      const updatedKnowledge = (memory?.accumulated_knowledge || "") + statusMessage;
+
+      await supabase
+        .from('customer_memory')
+        .update({ accumulated_knowledge: updatedKnowledge })
+        .eq('clientId', clientId);
+    }
+
+    return res.status(200).json({ success: true, message: 'Order updated successfully' });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Update Order Error:", error.message);
+    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
