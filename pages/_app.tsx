@@ -14,7 +14,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="sabanos" />
+        <meta name="apple-mobile-web-app-title" content="ח.סבן חומרי בנין" />
         <link rel="apple-touch-icon" href="https://i.postimg.cc/3wTMxG7W/ai.jpg" />
         <meta name="theme-color" content="#10b981" />
       </Head>
