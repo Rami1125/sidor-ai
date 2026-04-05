@@ -7,7 +7,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <>
       <Head>
         {/* זהות האפליקציה - sabanos */}
-        <title>sabanos</title>
+        <title>ח.סבן חומרי בנין</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
         
         {/* הגדרות PWA להתקנה סלולרית */}
