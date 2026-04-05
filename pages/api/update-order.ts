@@ -1,42 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
-// וידוי שהמפתחות קיימים לפני יצירת הקליינט
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export const maxDuration = 60; 
+export const dynamic = 'force-dynamic';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("CRITICAL: Supabase keys are missing in Environment Variables");
-}
-
-const supabaseAdmin = createClient(supabaseUrl || '', supabaseServiceKey || '');
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // פתיחת חסימת CORS לשיטה חכמה
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const { id, updates } = req.body;
-
+export async function POST(request: NextRequest) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('orders')
-      .update(updates)
-      .eq('id', id)
-      .select();
+    const body = await request.json();
+    const { fileName, fileData, mimeType, phone } = body;
 
-    if (error) throw error;
-    return res.status(200).json(data);
-  } catch (err: any) {
-    // זה ידפיס לך ב-Vercel Logs בדיוק מה הבעיה
-    return res.status(500).json({ 
-      error: "Server Error", 
-      message: err.message,
-      hint: "Check if SUPABASE_SERVICE_ROLE_KEY is set in Vercel Settings" 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzuKzJdg7B3Q0Q42IonnWlEgsE_o_Sj2dgqxpHrmU0ro-MYmlismm9LzMnpbn7y8rOj/exec";
+
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName, fileData, mimeType, phone }),
     });
+
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      return NextResponse.json({ link: result.link });
+    }
+    return NextResponse.json({ error: result.message }, { status: 500 });
+
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
