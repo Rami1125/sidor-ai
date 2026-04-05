@@ -171,7 +171,7 @@ export default function SabanAIAssistant() {
              </div>
              <div>
                 <h1 className="font-black text-white leading-none">ח.סבן חומרי בנין</h1>
-                <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">AI Command Center</span>
+                <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">היועץ שלך כאן</span>
              </div>
           </div>
           <Menu className="text-slate-400" />
