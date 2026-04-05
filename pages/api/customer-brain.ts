@@ -6,15 +6,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
+// שימוש במודלים המעודכנים ביותר לאפריל 2026 (כולל פתרון ל-Rotation)
 const modelPool = [
-  // המודל החדש והחסכוני ביותר להרצה מהירה (שוחרר ב-31 למרץ)
-  "gemini-3.1-flash-lite-preview", 
-  
-  // המודל החזק ביותר לניתוח טקסט ומדיה (עודכן ב-9 למרץ)
-  "gemini-3.1-pro-preview", 
-  
-  // המודל החדש של גוגל למשימות ממוקדות ויעילות (שוחרר ב-2 לאפריל)
-  "gemma-4-31b-it" 
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3.1-pro-preview",
+  "gemini-2.0-flash"
 ];
 
 const MUNICIPALITY_RULES: any = {
@@ -31,54 +27,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { message, senderPhone } = req.body;
   const cleanMsg = (message || "").trim();
   const phone = senderPhone?.replace('@c.us', '') || 'unknown';
+  
+  // בחירת מודל רנדומלית מהפול המעודכן
   const selectedModel = modelPool[Math.floor(Math.random() * modelPool.length)];
 
   try {
-    // 1. שליפת ידע משולב: אימון, מלאי, זיכרון והזמנה אחרונה לסטטוס
+    // 1. שליפת נתונים מהמאגר
     const { data: training } = await supabase.from('ai_training').select('content');
     const { data: inventory } = await supabase.from('brain_inventory').select('*');
     const { data: memory } = await supabase.from('customer_memory').select('*').eq('clientId', phone).maybeSingle();
     const { data: lastOrder } = await supabase.from('orders').select('*').ilike('client_info', `%${phone}%`).order('created_at', { ascending: false }).limit(1).maybeSingle();
     
-    // 2. זיהוי עיר ללוגיקת מכולות
+    // 2. בדיקת לוגיקה עירונית
     let cityLogic = "";
     for (const city in MUNICIPALITY_RULES) {
       if (cleanMsg.includes(city)) {
-        cityLogic = `עיר: ${city}. הנחיות קריטיות: ${MUNICIPALITY_RULES[city].alert} לינק להיתר: ${MUNICIPALITY_RULES[city].link}`;
+        cityLogic = `עיר: ${city}. הנחיות: ${MUNICIPALITY_RULES[city].alert} לינק: ${MUNICIPALITY_RULES[city].link}`;
       }
     }
 
-    const orderStatusInfo = lastOrder 
-      ? `סטטוס הזמנה #${lastOrder.order_number}: ${lastOrder.status}. שעה: ${lastOrder.delivery_time || 'טרם נקבעה'}. נהג: ${lastOrder.driver_info || 'טרם שויך'}.` 
-      : "אין הזמנה פעילה כרגע.";
-
     const prompt = `
       זהות: המוח המרכזי של "ח.סבן". סמכותי, תמציתי, עובד בשיטת פינג-פונג.
-      שם הלקוח: ${memory?.user_name || 'אורח'}.
-      מידע על הזמנה קיימת: ${orderStatusInfo}
-      
-      חוקי מחיר למכולה: 8 קו"ב = 1,200 ₪ + מע"מ (ציין מחיר רק אם נשאלת).
-      
-      ידע מקצועי (ai_training):
+      הלקוח: ${memory?.user_name || 'אורח'}.
+      סטטוס הזמנה קיימת: ${lastOrder ? `${lastOrder.status}, שעה: ${lastOrder.delivery_time || 'בטיפול'}, נהג: ${lastOrder.driver_info || 'טרם'}` : 'אין'}
+
+      ידע מקצועי:
       ${training?.map(t => t.content).join('\n')}
       
-      מלאי זמין (brain_inventory):
-      ${inventory?.map(i => `${i.product_name} (מק"ט: ${i.sku}): ${i.price}₪`).join('\n')}
+      מלאי ומחירים:
+      ${inventory?.map(i => `${i.product_name} (${i.sku}): ${i.price}₪`).join('\n')}
 
-      לוגיקה עירונית (אם רלוונטי):
       ${cityLogic}
 
-      הנחיות פלט למערכת:
-      - אישור הזמנה: הוסף SAVE_ORDER_DB:[SKU/פריט]:[כמות].
-      - הערת לקוח/דחיפות: הוסף CLIENT_NOTE:[התוכן]. (מדליק זיקית 🦎).
-      - הצגת מוצר: הוסף SHOW_PRODUCT_CARD:[SKU].
-      
-      חשוב: אם מדובר בייעוץ טכני, אל תדבר על זמני אספקה. אם מדובר בהזמנה, ציין ששעה סופית נקבעת ע"י המשרד.
+      הנחיות פלט (חובה):
+      - אישור הזמנה: SAVE_ORDER_DB:[מוצר]:[כמות]
+      - הערה דחופה/זיקית: CLIENT_NOTE:[התוכן]
+      - הצגת כרטיס: SHOW_PRODUCT_CARD:[SKU]
+      - אם מדובר בייעוץ טכני בלבד: אל תציג זמני אספקה.
 
       הודעה: "${cleanMsg}"
       היסטוריה: ${memory?.accumulated_knowledge || ""}
     `;
 
+    // 3. קריאה ל-Gemini API עם ה-Key מה-Environment
     const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -86,26 +77,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     
     const aiData = await aiRes.json();
-    let reply = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "אחי, שלח שוב הודעה.";
+    
+    // אם המודל לא זמין, נחזיר הודעת שגיאה מפורטת ללוגים
+    if (aiData.error) {
+      console.error("Gemini Error:", aiData.error.message);
+      throw new Error(aiData.error.message);
+    }
 
-    // 3. עיבוד פקודות ועדכון Database
-    const hasSave = reply.includes("SAVE_ORDER_DB:");
+    let reply = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "אחי, המוח בטעינה, שלח שוב.";
+
+    // 4. עיבוד פקודות ועדכון Supabase (סגירת מעגל)
     const hasNote = reply.includes("CLIENT_NOTE:");
     const clientNote = reply.match(/CLIENT_NOTE:\[(.*?)\]/)?.[1] || null;
 
-    if (hasSave || hasNote) {
+    if (reply.includes("SAVE_ORDER_DB:") || hasNote) {
       if (lastOrder && lastOrder.status === 'pending') {
-        // עדכון הזמנה קיימת (איחוד)
         await supabase.from('orders').update({
-          warehouse: lastOrder.warehouse + (hasSave ? `\n• עדכון: ${cleanMsg}` : ""),
+          warehouse: lastOrder.warehouse + `\n• עדכון: ${cleanMsg}`,
           customer_note: clientNote || lastOrder.customer_note,
           has_new_note: !!clientNote
         }).eq('id', lastOrder.id);
       } else {
-        // יצירת הזמנה חדשה
         await supabase.from('orders').insert([{
           client_info: `שם: ${memory?.user_name || 'אורח'} | טלפון: ${phone}`,
-          product_name: "📦 סל מוצרים מתעדכן",
           warehouse: cleanMsg,
           customer_note: clientNote,
           has_new_note: !!clientNote,
@@ -115,25 +109,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // 4. עדכון זיכרון ושם לקוח
-    let updatedUserName = memory?.user_name;
-    if (!updatedUserName && cleanMsg.length < 15 && !cleanMsg.includes("?")) {
-      updatedUserName = cleanMsg.replace(/שמי|אני|קוראים לי/g, "").trim();
-    }
-
+    // 5. עדכון זיכרון
     await supabase.from('customer_memory').upsert({
       clientId: phone,
-      user_name: updatedUserName,
       accumulated_knowledge: ((memory?.accumulated_knowledge || "") + `\nU: ${cleanMsg}\nAI: ${reply}`).slice(-1500)
     }, { onConflict: 'clientId' });
 
-    // ניקוי פקודות מהתשובה ללקוח
-    const cleanReply = reply.replace(/\[.*?\]/g, "").replace(/SAVE_ORDER_DB:.*?/g, "").replace(/SHOW_PRODUCT_CARD:.*?/g, "").replace(/CLIENT_NOTE:.*?/g, "").trim();
+    // ניקוי התשובה מפקודות לפני שליחה ללקוח
+    const cleanReply = reply.replace(/\[.*?\]/g, "").replace(/SAVE_ORDER_DB:.*?/g, "").replace(/CLIENT_NOTE:.*?/g, "").replace(/SHOW_PRODUCT_CARD:.*?/g, "").trim();
 
     return res.status(200).json({ reply: cleanReply });
 
-  } catch (error) {
-    console.error("API Error:", error);
-    return res.status(500).json({ reply: "אחי, המוח בטעינה. נסה שוב בעוד רגע." });
+  } catch (error: any) {
+    console.error("Critical Failure:", error.message);
+    return res.status(200).json({ reply: "בוס, יש תקלה בחיבור ל-Gemini. וודא שה-API KEY מעודכן ב-Vercel." });
   }
 }
