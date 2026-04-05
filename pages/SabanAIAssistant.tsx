@@ -57,7 +57,7 @@ export default function SabanAIAssistant() {
       const base64Clean = base64Data.split(',')[1];
 
       try {
-        const res = await fetch('/api/upload-to-drive', {
+        const res = await fetch('/api/update-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
