@@ -19,6 +19,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing parameters' });
     }
 
+    // הגדרת גודל מקסימלי ל-10MB (במקום הדיפולט הקטן)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
     // 1. עדכון סטטוס ההזמנה בטבלת orders
     const { error: orderError } = await supabase
       .from('orders')
