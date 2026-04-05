@@ -34,7 +34,7 @@ export default function EntryPage() {
       >
         <div className="flex items-center gap-2">
           <ShieldCheck className="text-emerald-500" size={24} />
-          <span className="font-black text-white tracking-tighter uppercase">SABAN <span className="text-emerald-500">COMMANDER</span></span>
+          <span className="font-black text-white tracking-tighter uppercase">ח.סבן חומרי בנין <span className="text-emerald-500">COMMANDER</span></span>
         </div>
         <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">System v3.1 Live</div>
       </motion.header>
@@ -48,7 +48,7 @@ export default function EntryPage() {
         >
           {/* התמונה שיצרת - רקע הכניסה */}
           <img 
-            src="https://i.postimg.cc/wTFJbMNp/Designer-1.png" // וודא שזה הלינק הנכון לתמונה שלך
+            src="https://i.postimg.cc/N0PrS8wg/Designer-(7).png" // וודא שזה הלינק הנכון לתמונה שלך
             alt="Saban AI Entry" 
             className="w-full h-auto opacity-90"
           />
