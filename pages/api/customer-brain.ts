@@ -7,8 +7,14 @@ const supabase = createClient(
 );
 
 const modelPool = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash"
+  // המודל החדש והחסכוני ביותר להרצה מהירה (שוחרר ב-31 למרץ)
+  "gemini-3.1-flash-lite-preview", 
+  
+  // המודל החזק ביותר לניתוח טקסט ומדיה (עודכן ב-9 למרץ)
+  "gemini-3.1-pro-preview", 
+  
+  // המודל החדש של גוגל למשימות ממוקדות ויעילות (שוחרר ב-2 לאפריל)
+  "gemma-4-31b-it" 
 ];
 
 const MUNICIPALITY_RULES: any = {
