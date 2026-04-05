@@ -7,8 +7,9 @@ const supabase = createClient(
 );
 
 // שימוש במודלים המעודכנים ביותר לאפריל 2026 (כולל פתרון ל-Rotation)
+// pages/api/customer-brain.ts
 const modelPool = [
-  "gemini-3.1-flash-lite-preview",
+  "gemini-3.1-flash-lite-preview", // המודל הכי יציב כרגע
   "gemini-3.1-pro-preview",
   "gemini-2.0-flash"
 ];
