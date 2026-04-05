@@ -1,9 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { createClient } from '@supabase/supabase-js';
-import OrderBoard from '@/components/OrderBoard'; // ייבוא הלוח החדש
-import { ShoppingBag, BellRing, Settings, ShieldCheck } from 'lucide-react';
+import OrderBoard from '@/components/OrderBoard';
+import { ShieldCheck, BellRing, Settings, Loader2 } from 'lucide-react';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,104 +13,75 @@ const supabase = createClient(
 export default function Commander() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // שליפת נתונים ראשונית וחיבור ל-Realtime
   useEffect(() => {
     fetchOrders();
-
-    const channel = supabase
-      .channel('commander-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchOrders();
-      })
+    const channel = supabase.channel('commander-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchOrders())
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setOrders(data);
-    }
+    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+    if (data) setOrders(data);
     setLoading(false);
   };
 
-  // פונקציית העדכון שהלוח דורש
   const handleUpdate = async (id: string, updates: any) => {
-    try {
-      const res = await fetch('/api/update-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, updates })
-      });
-      if (res.ok) fetchOrders();
-    } catch (err) {
-      console.error("Commander Update Error:", err);
-    }
+    const res = await fetch('/api/update-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, updates })
+    });
+    if (res.ok) fetchOrders();
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col italic" dir="rtl">
-<Head>
-  <title>לוח הזמנות</title>
-  {/* התיקון לאזהרה שקיבלת */}
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-</Head>
+    // fixed inset-0 תופס את כל המסך, overflow-hidden מונע מהדף "לברוח"
+    <div className="fixed inset-0 bg-[#F8FAFC] flex flex-col overflow-hidden italic" dir="rtl">
+      <Head>
+        <title>SABAN COMMANDER</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </Head>
+      
+      <audio ref={audioRef} src="/order-notification.mp3" preload="auto" />
 
-      {/* Header יוקרתי - עיצוב היברידי */}
-      <header className="bg-white border-b border-slate-100 p-6 sticky top-0 z-50 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="bg-slate-900 p-3 rounded-2xl shadow-lg">
-            <ShieldCheck className="text-emerald-400" size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none italic">
-              SABAN <span className="text-emerald-500">COMMANDER</span>
-            </h1>
-            <p className="text-[9px] font-bold text-slate-400 tracking-[0.3em] uppercase mt-1">Operational Control Tower</p>
-          </div>
-        </div>
-
+      {/* Header קבוע למעלה */}
+      <header className="bg-white border-b border-slate-100 p-4 md:p-6 shrink-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="bg-slate-50 border border-slate-100 px-5 py-2 rounded-2xl flex items-center gap-3 shadow-inner">
-            <BellRing className="text-slate-400" size={18} />
-            <span className="text-lg font-black text-slate-900">{orders.filter(o => o.status === 'pending').length}</span>
+          <div className="bg-slate-900 p-2 rounded-xl shadow-lg">
+            <ShieldCheck className="text-emerald-400" size={20} />
           </div>
-          <button className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl active:scale-95 transition-all">
-            <Settings size={20} />
-          </button>
+          <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">SABAN <span className="text-emerald-500">OS</span></h1>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-50 px-4 py-1.5 rounded-2xl border border-slate-100">
+          <BellRing className="text-slate-400" size={16} />
+          <span className="text-md font-black">{orders.filter(o => o.status === 'pending').length}</span>
         </div>
       </header>
 
-      {/* אזור הלוח */}
-      <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-6 px-2">
-            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] italic">לוח הזמנות פעיל</h2>
-            <div className="h-px flex-1 bg-slate-100 mx-4" />
-          </div>
-
-          {/* התיקון כאן: הזרקת ה-Orders וה-onUpdate לתוך הלוח */}
+      {/* כאן התיקון: flex-1 לוקח את כל השטח, ו-overflow-y-auto מאפשר גלילה רק כאן */}
+      <main className="flex-1 overflow-y-auto overscroll-contain p-4 md:p-8 custom-scroll">
+        <div className="max-w-7xl mx-auto w-full pb-24"> 
           {loading ? (
-            <div className="flex justify-center p-20 animate-pulse text-slate-300 font-black italic uppercase">Synchronizing...</div>
+            <div className="flex flex-col items-center justify-center p-20 gap-4 text-slate-300 italic">
+              <Loader2 className="animate-spin" size={32} />
+              <span className="font-black uppercase tracking-widest">Synchronizing...</span>
+            </div>
           ) : (
             <OrderBoard orders={orders} onUpdate={handleUpdate} />
           )}
-        </section>
+        </div>
       </main>
 
+      {/* CSS להעלמת סרגל גלילה מכוער במובייל */}
       <style jsx global>{`
-        body { background: #F8FAFC; margin: 0; }
-        ::-webkit-scrollbar { width: 0px; }
+        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; -webkit-overflow-scrolling: touch; }
+        .custom-scroll::-webkit-scrollbar { width: 0px; background: transparent; }
+        input, button { -webkit-tap-highlight-color: transparent; }
       `}</style>
     </div>
   );
