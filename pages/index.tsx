@@ -166,7 +166,6 @@ export default function SabanAIAssistant() {
         <header className="h-20 flex items-center justify-between px-6 bg-[#202c33]/90 backdrop-blur-md border-b border-white/5 shrink-0">
           <div className="flex items-center gap-3">
              <div className="relative">
-               <meta name="mobile-web-app-capable" content="yes">
                 <img src={SABAN_LOGO} className="w-10 h-10 rounded-xl border border-emerald-500/20"/>
                 <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#202c33]" />
              </div>
