@@ -1,89 +1,59 @@
-import { createClient } from '@supabase/supabase-js';
-import type { NextApiRequest, NextApiResponse } from 'next';
+// api/chat/route.js (Vercel / Next.js)
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from "@supabase/supabase-ai"; // אם אתה משתמש ב-SDK של סופבייס
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const modelPool = ["gemini-3.1-flash-lite-preview", "gemini-3.1-pro-preview", "gemini-2.0-flash"];
+export async function POST(req) {
+  const { messages, userInput } = await req.json();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  // 1. הגדרת המוח (כאן אתה מדביק את ה-Prompt שהגדרנו)
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    systemInstruction: `
+      אתה המוח המרכזי של "ח. סבן". תפקידך לנהל שיחות מכירה ולוגיסטיקה.
+      חוקים:
+      - הודעה אחת = שאלה אחת.
+      - סגנון דיבור: מקצועי, תמציתי, "שותף/אח".
+      - בסיום הזמנה חובה להוסיף: SAVE_ORDER_DB:[מוצר:כמות].
+      - אם יש בקשה מיוחדת הוסף: CLIENT_NOTE:[התוכן].
+      - השעה הסופית נקבעת על ידי המשרד.
+    `,
+  });
+
+  const chat = model.startChat({
+    history: messages, // היסטוריית השיחה שנשמרת בצד הלקוח
+  });
+
+  // 2. שליחת ההודעה ל-Gemini
+  const result = await chat.sendMessage(userInput);
+  const fullResponse = result.response.text();
+
+  // 3. לוגיקה לחילוץ פקודות (Parsing)
+  let cleanText = fullResponse;
   
-  const { message, senderPhone } = req.body;
-  const cleanMsg = (message || "").trim();
-  const phone = senderPhone?.replace('@c.us', '') || 'admin';
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const selectedModel = modelPool[Math.floor(Math.random() * modelPool.length)];
-
-  console.log(`--- [START] צינור חיבור: הודעה מ-${phone} ---`);
-
-  try {
-    const { data: memory } = await supabase.from('customer_memory').select('*').eq('clientId', phone).maybeSingle();
-    let currentUserName = memory?.user_name || "";
-    const chatHistory = memory?.accumulated_knowledge || "";
-
-    const prompt = `אתה המוח של ח.סבן. לקוח: ${currentUserName}. הודעה: "${cleanMsg}". אשר קבלת פרטים והוסף CLIENT_NOTE:[פירוט] אם דחוף.`;
-
-    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
-    
-    const aiData = await aiRes.json();
-    const replyText = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-
-    // עדכון שם (אבי לוי / עבודות עפר)
-    if (cleanMsg.includes("לוי") || cleanMsg.includes("עפר")) {
-      currentUserName = cleanMsg.replace("אני ", "").trim();
-    }
-
-    // הזרקה ל-DB - התאמה לעמודות הקיימות שלך
-    const isOrderRelated = cleanMsg.includes("מכולה") || cleanMsg.includes("ויצמן") || cleanMsg.includes("היום");
-    
-    if (isOrderRelated || replyText.includes("SAVE_ORDER_DB")) {
-      console.log("--- [DB INJECTION] מנסה להזריק למבנה הטבלה המזוהה... ---");
-      
-      const noteFromAI = replyText.match(/CLIENT_NOTE:\[(.*?)\]/)?.[1] || "";
-      // איחוד המידע לתוך עמודת ה-warehouse כדי שלא יהיו שגיאות עמודה חסרה
-      const fullOrderDetails = `${cleanMsg}${noteFromAI ? ` | הערה: ${noteFromAI}` : ""}`;
-
-      const { error: dbError } = await supabase.from('orders').insert([{
-        client_info: `שם: ${currentUserName || 'אורח'} | טלפון: ${phone}`,
-        warehouse: fullOrderDetails, // כאן נכנס הכל (הזמנה + הערה)
-        status: 'pending',
-        has_new_note: true, // מדליק זיקית
-        order_time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-      }]);
-
-      if (dbError) {
-        console.error("שגיאה סופית בהזרקה:", dbError.message);
-        // ניסיון אחרון - הזרקה מינימלית בלבד
-        await supabase.from('orders').insert([{
-          client_info: phone,
-          warehouse: cleanMsg,
-          status: 'pending'
-        }]);
-      } else {
-        console.log("הזמנה הוזרקה בהצלחה לטבלה!");
-      }
-    }
-
-    // עדכון זיכרון
-    await supabase.from('customer_memory').upsert({
-      clientId: phone, 
-      user_name: currentUserName, 
-      accumulated_knowledge: (chatHistory + "\nU: " + cleanMsg + "\nAI: " + replyText).slice(-1000)
-    }, { onConflict: 'clientId' });
-
-    let finalReply = replyText.replace(/\[.*?\]/g, "").replace(/SAVE_ORDER_DB:.*?/g, "").replace(/CLIENT_NOTE:.*?/g, "").trim();
-    if (!finalReply) finalReply = `אח שלי, רשמתי את ההזמנה ל${cleanMsg}. בודק ומעדכן.`;
-
-    return res.status(200).json({ reply: finalReply });
-
-  } catch (error) {
-    return res.status(200).json({ reply: "מטפל בזה, כבר חוזר אליך." });
+  // זיהוי פקודת שמירה לבסיס הנתונים
+  const orderMatch = fullResponse.match(/SAVE_ORDER_DB:\[(.*?)\]/);
+  if (orderMatch) {
+    const orderDetails = orderMatch[1];
+    // כאן אתה מפעיל פונקציה שכותבת ל-Supabase
+    await saveToSupabase(orderDetails);
+    // מנקים את הפקודה מהטקסט שהלקוח רואה
+    cleanText = cleanText.replace(orderMatch[0], "");
   }
+
+  // זיהוי הערת לקוח
+  const noteMatch = fullResponse.match(/CLIENT_NOTE:\[(.*?)\]/);
+  if (noteMatch) {
+    await saveClientNote(noteMatch[1]);
+    cleanText = cleanText.replace(noteMatch[0], "");
+  }
+
+  // 4. החזרת התשובה "הנקייה" לממשק
+  return new Response(JSON.stringify({ text: cleanText.trim() }));
+}
+
+async function saveToSupabase(details) {
+  // הלוגיקה שלך לחיבור ל-DB
+  console.log("Saving to DB:", details);
 }
