@@ -1,7 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-// 1. זה חייב להיות כאן בחוץ! כדי שהשרת ידע להגדיל את המכסה מראש
 export const config = {
   api: {
     bodyParser: {
@@ -9,11 +7,6 @@ export const config = {
     },
   },
 };
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -38,9 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       return res.status(500).json({ error: result.message });
     }
-
   } catch (error: any) {
-    console.error("Upload Error:", error.message);
-    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    return res.status(500).json({ error: error.message });
   }
 }
