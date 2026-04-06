@@ -25,47 +25,56 @@ export default function SabanAIAssistant() {
   }, [messages, isScanning]);
 
   // לוגיקת סריקה וניתוח ויזואלי
-  const processVisualScan = async (base64: string, file: File) => {
-    try {
-      // כיווץ תמונה ב-Client Side לביצועים מקסימליים
-      const img = new Image();
-      img.src = base64;
-      await new Promise((res) => (img.onload = res));
-      
-      const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 1000;
-      const scale = MAX_WIDTH / img.width;
-      canvas.width = MAX_WIDTH;
-      canvas.height = img.height * scale;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+// 1. תיקון ניתוח תמונות (Vision)
+const processVisualScan = async (base64: string, file: File) => {
+  try {
+    setIsScanning(true);
+    const base64Clean = base64.split(',')[1];
 
-      // העלאה וניתוח במקביל או בטור לפי הלוגים המוצלחים
-      const driveRes = await fetch('/api/upload-to-drive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: `scan_${Date.now()}.jpg`, fileData: compressedBase64, mimeType: 'image/jpeg', phone: 'admin' })
-      });
-      const driveData = await driveRes.json();
+    // שליחה למוח הייעודי לניתוח תמונות
+    const aiRes = await fetch('/api/tools-brain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: "נתח את התמונה ששלחתי", 
+        imageBase64: base64Clean 
+      })
+    });
+    
+    const aiData = await aiRes.json();
+    setMessages(prev => [...prev, { role: 'ai', content: aiData.reply }]);
+  } catch (e) {
+    setMessages(prev => [...prev, { role: 'ai', content: "בוס, המוח לא הצליח לקרוא את התמונה. נסה שוב." }]);
+  } finally {
+    setIsScanning(false);
+    setScanPreview(null);
+  }
+};
 
-      const aiRes = await fetch('/api/tools-brain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: "נתח את התמונה", imageBase64: compressedBase64, imageUrl: driveData.link })
-      });
-      const aiData = await aiRes.json();
+// 2. תיקון ניתוח מסמכי PDF (OCR)
+const processDocument = async (name: string, base64: string) => {
+  try {
+    setIsScanning(true);
+    const base64Clean = base64.split(',')[1];
 
-      setMessages(prev => [...prev, { role: 'ai', content: aiData.reply }]);
-    } catch (e) {
-      setMessages(prev => [...prev, { role: 'ai', content: "בוס, הסריקה נכשלה. וודא שיש קליטה ונסה שוב." }]);
-    } finally {
-      setTimeout(() => {
-        setIsScanning(false);
-        setScanPreview(null);
-      }, 1000);
-    }
-  };
+    const aiRes = await fetch('/api/tools-brain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: `נתח את קובץ ה-PDF ששמו: ${name}. חלץ כמויות ומוצרים.`, 
+        imageBase64: base64Clean, // Gemini 2.0 תומך ב-PDF כ-Base64 ב-Vision
+        mimeType: "application/pdf"
+      })
+    });
+    
+    const aiData = await aiRes.json();
+    setMessages(prev => [...prev, { role: 'ai', content: aiData.reply }]);
+  } catch (e) {
+    setMessages(prev => [...prev, { role: 'ai', content: "שגיאה בקריאת המסמך אחי." }]);
+  } finally {
+    setIsScanning(false);
+  }
+};
 
   const handleFileAction = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
