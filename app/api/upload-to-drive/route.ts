@@ -1,38 +1,41 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb', // פתיחת חסימה עד 10 מגה
-    },
-  },
-};
+// הגדרות סגמנט ל-App Router (במקום ה-config הישן)
+export const maxDuration = 60; 
+export const dynamic = 'force-dynamic';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const { message, imageBase64 } = req.body;
-  const geminiKey = process.env.GEMINI_API_KEY;
-
+export async function POST(request: NextRequest) {
   try {
-    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+    // ב-App Router, ה-body נשלף ככה ואין הגבלת bodyParser קשיחה
+    const body = await request.json();
+    const { fileName, fileData, mimeType, phone } = body;
+
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzuKzJdg7B3Q0Q42IonnWlEgsE_o_Sj2dgqxpHrmU0ro-MYmlismm9LzMnpbn7y8rOj/exec";
+
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: "אתה מומחה טכני של ח.סבן. נתח את התמונה ואבחן סדקים, חלודה או צורך באיטום." },
-            { inline_data: { mime_type: "image/jpeg", data: imageBase64 } }
-          ]
-        }]
-      })
+        fileName,
+        fileData,
+        mimeType,
+        phone
+      }),
     });
 
-    const data = await aiRes.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא הצלחתי לראות ברור, אחי. תנסה לצלם שוב מקרוב.";
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      return NextResponse.json({ link: result.link });
+    }
     
-    return res.status(200).json({ reply });
-  } catch (error) {
-    return res.status(500).json({ error: "טעות בניתוח התמונה" });
+    return NextResponse.json({ error: result.message }, { status: 500 });
+
+  } catch (error: any) {
+    console.error("Upload Route Error:", error.message);
+    return NextResponse.json({ 
+      error: "Internal Server Error", 
+      details: error.message 
+    }, { status: 500 });
   }
 }
