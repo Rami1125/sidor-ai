@@ -1,47 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-// הגדרות סגמנט ל-App Router (זה מחליף את ה-config הישן)
-export const maxDuration = 60; 
-export const dynamic = 'force-dynamic';
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
 
-export async function POST(request: NextRequest) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { message, imageBase64 } = req.body;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  // הגנה: בדיקת מפתח API
+  if (!geminiKey) {
+    console.error("Missing GEMINI_API_KEY");
+    return res.status(500).json({ error: "שרת ה-AI לא מוגדר (חסר מפתח)" });
+  }
+
+  // הגנה: בדיקת תוכן התמונה
+  if (!imageBase64) {
+    return res.status(400).json({ error: "לא התקבלה תמונה לניתוח" });
+  }
+
   try {
-    // ב-App Router, ה-body נשאב ככה. 
-    // שים לב: Vercel מגבילה את ה-Payload ל-4.5MB בתוכנית החינמית, 
-    // לכן הכיווץ ב-Frontend (Canvas) שסידרנו הוא קריטי.
-    const body = await request.json();
-    const { fileName, fileData, mimeType, phone } = body;
-
-    if (!fileData) {
-      return NextResponse.json({ error: "Missing file data" }, { status: 400 });
-    }
-
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzuKzJdg7B3Q0Q42IonnWlEgsE_o_Sj2dgqxpHrmU0ro-MYmlismm9LzMnpbn7y8rOj/exec";
-
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
+    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fileName,
-        fileData,
-        mimeType,
-        phone
-      }),
+        contents: [{
+          parts: [
+            { text: "אתה המומחה הטכני של ח.סבן. נתח את התמונה ואבחן סדקים, חלודה או צורך באיטום. תן פתרון עם מוצרי סיקה/טמבור." },
+            { 
+              inline_data: { 
+                mime_type: "image/jpeg", 
+                data: imageBase64.replace(/^data:image\/\w+;base64,/, "") // ניקוי ה-Prefix אם קיים
+              } 
+            }
+          ]
+        }]
+      })
     });
 
-    const result = await response.json();
+    const data = await aiRes.json();
 
-    if (result.status === 'success') {
-      return NextResponse.json({ link: result.link });
+    if (data.error) {
+      console.error("Gemini API Error:", data.error);
+      return res.status(500).json({ error: data.error.message });
     }
-    
-    return NextResponse.json({ error: result.message }, { status: 500 });
+
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא הצלחתי לנתח את התמונה.";
+    return res.status(200).json({ reply });
 
   } catch (error: any) {
-    console.error("Upload Route Error:", error.message);
-    return NextResponse.json({ 
-      error: "Internal Server Error", 
-      details: error.message 
-    }, { status: 500 });
+    console.error("Runtime Error in tools-brain:", error.message);
+    return res.status(500).json({ error: "שגיאת שרת פנימית בניתוח" });
   }
 }
