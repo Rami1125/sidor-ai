@@ -47,42 +47,40 @@ export default function SabanAIAssistant() {
     };
   };
 
-  const processVisualScan = async (base64: string, file: File) => {
+const processVisualScan = async (base64: string, file: File) => {
     try {
-      const base64Clean = base64.split(',')[1];
-      // 1. העלאה ל-Google Drive לתיעוד
-      const driveRes = await fetch('/api/upload-to-drive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: `scan_${Date.now()}.jpg`, fileData: base64Clean, mimeType: file.type, phone: 'admin' })
-      });
-      const driveData = await driveRes.json();
+      const img = new Image();
+      img.src = base64;
+      await new Promise((resolve) => (img.onload = resolve));
 
-      // 2. ניתוח AI ויזואלי (Vision)
+      // כיווץ אופטימלי ל-AI
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 1000;
+      const scale = MAX_WIDTH / img.width;
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scale;
+      
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // איכות 0.6 חוסכת המון מקום בלי לפגוע בזיהוי
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+
+      // שליחה למוח הסורק
       const aiRes = await fetch('/api/tools-brain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: "נתח את התמונה ששלחתי", imageBase64: base64Clean, imageUrl: driveData.link })
+        body: JSON.stringify({ message: "נתח סדק/מוצר", imageBase64: compressedBase64 })
       });
+      
       const aiData = await aiRes.json();
-
       setMessages(prev => [...prev, { role: 'ai', content: aiData.reply }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'ai', content: "בוס, הייתה שגיאה בסורק הוויזואלי. נסה שוב." }]);
+      setMessages(prev => [...prev, { role: 'ai', content: "בוס, התמונה גדולה מדי או שיש תקלה בתקשורת. נסה שוב." }]);
     } finally {
-      setTimeout(() => {
-        setIsScanning(false);
-        setScanPreview(null);
-      }, 1500); // השהייה קלה לסיום האנימציה
-    }
-  };
-
-  const processDocument = async (name: string, base64: string) => {
-    setMessages(prev => [...prev, { role: 'user', content: `שלחתי קובץ PDF: ${name}` }]);
-    setTimeout(() => {
       setIsScanning(false);
-      setMessages(prev => [...prev, { role: 'ai', content: "קיבלתי את ה-PDF. המוח קורא את המפרט הטכני ויעדכן אותך מיד." }]);
-    }, 2000);
+      setScanPreview(null);
+    }
   };
 
   const askAI = async (text: string) => {
