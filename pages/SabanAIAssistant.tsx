@@ -42,7 +42,7 @@ export default function SabanAIAssistant() {
       const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
 
       // העלאה וניתוח במקביל או בטור לפי הלוגים המוצלחים
-      const driveRes = await fetch('/api/upload-to-drive', {
+      const driveRes = await fetch('/api/tools-to-drive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileName: `scan_${Date.now()}.jpg`, fileData: compressedBase64, mimeType: 'image/jpeg', phone: 'admin' })
