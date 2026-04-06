@@ -1,73 +1,62 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-// מאגר המודלים המעודכן - חסין כדורים
+// הגדרת מאגר המודלים
 const MODEL_POOL = [
-  "gemini-2.0-flash",           // הכי מהיר וחכם כרגע (דיפולט)
-  "gemini-1.5-pro",             // יציב מאוד לניתוח עמוק
-  "gemini-1.5-flash-8b"         // גיבוי מהיר במקרה של עומס קיצוני
+  "gemini-2.0-flash",
+  "gemini-1.5-pro",
+  "gemini-1.5-flash"
 ];
 
-export async function POST(req) {
-  try {
-    const { message, senderPhone } = await req.json();
-    const geminiKey = process.env.GEMINI_API_KEY;
-
-    if (!geminiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
-
-    let lastError = null;
-
-    // לוגיקת ה-Retry והמעבר בין מודלים (חסין כדורים)
-    for (const modelName of MODEL_POOL) {
-      try {
-        console.log(`Trying model: ${modelName}`);
-        
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{ 
-                  text: `אתה המוח המרכזי של ח.סבן. לקוח פנה אליך בכתובת: ${message}. 
-                         היה מקצועי, ענייני, חברותי ועזור לו בכל נושא טכני או הזמנה. 
-                         אם אתה לא יודע, תגיד שנציג אנושי יחזור אליו לטלפון ${senderPhone}.` 
-                }]
-              }],
-              generationConfig: {
-                temperature: 0.7,
-                topP: 0.8,
-                topK: 40
-              }
-            })
-          }
-        );
-
-        const data = await response.json();
-
-        if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-          const reply = data.candidates[0].content.parts[0].text;
-          return NextResponse.json({ reply, modelUsed: modelName });
-        }
-
-        // אם הגענו לכאן, המודל החזיר תשובה ריקה או שגיאת API
-        console.warn(`Model ${modelName} failed, trying next...`);
-        lastError = data.error?.message || "Empty response";
-
-      } catch (err) {
-        console.error(`Error with ${modelName}:`, err.message);
-        lastError = err.message;
-      }
-    }
-
-    // אם כל המודלים נכשלו
-    throw new Error(`All models failed. Last error: ${lastError}`);
-
-  } catch (error) {
-    console.error("Critical Brain Error:", error);
-    return NextResponse.json({ 
-      reply: "בוס, המערכת בעומס קל. נסה לשלוח שוב בעוד רגע או שנציג אנושי יחזור אליך.",
-      error: error.message 
-    }, { status: 500 });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // רק פניות POST מאושרות
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  const { message, imageBase64 } = req.body;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  if (!geminiKey) return res.status(500).json({ error: "Missing API Key" });
+  if (!imageBase64) return res.status(400).json({ error: "No image provided" });
+
+  // ניקוי ה-Base64
+  const cleanData = imageBase64.includes('base64,') 
+    ? imageBase64.split('base64,')[1] 
+    : imageBase64;
+
+  let lastError = null;
+
+  // לוגיקת Fallback בין מודלים
+  for (const modelName of MODEL_POOL) {
+    try {
+      const aiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: "אתה המומחה הטכני של ח.סבן. נתח את התמונה ואבחן סדקים, חלודה או צורך באיטום. תן פתרון עם מוצרי סיקה/טמבור." },
+                { inline_data: { mime_type: "image/jpeg", data: cleanData } }
+              ]
+            }]
+          })
+        }
+      );
+
+      const data = await aiRes.json();
+
+      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+        const reply = data.candidates[0].content.parts[0].text;
+        return res.status(200).json({ reply, model: modelName });
+      }
+      
+      lastError = data.error?.message || "Empty response from AI";
+    } catch (err: any) {
+      lastError = err.message;
+    }
+  }
+
+  return res.status(500).json({ error: `כל המודלים נכשלו: ${lastError}` });
 }
