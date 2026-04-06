@@ -55,13 +55,11 @@ export default function SabanAIAssistant() {
     if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading, streamingText, isScanning]);
 
-  // פונקציית צליל התראה
   const playNotification = () => {
     const audio = new Audio('/message-pop.mp3');
     audio.play().catch(() => {});
   };
 
-  // חישוב כמויות דינמי לפי תשובת לקוח
   const calculateProductsBySQM = (sqm) => {
     const items = [
       { id: 1, name: "סיקפלקס 11FC", qty: Math.ceil(sqm / 3), unit: "יחידות" },
@@ -75,32 +73,16 @@ export default function SabanAIAssistant() {
 
   const processVisualScan = async (base64) => {
     try {
-      const img = new Image();
-      img.src = base64;
-      await new Promise((res) => (img.onload = res));
-      
-      const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 1000;
-      const scale = MAX_WIDTH / img.width;
-      canvas.width = MAX_WIDTH;
-      canvas.height = img.height * scale;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-
       const aiRes = await fetch('/api/tools-brain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: "נתח את התמונה", imageBase64: compressedBase64, senderPhone: phone })
+        body: JSON.stringify({ imageBase64: base64, senderPhone: phone })
       });
-      const aiData = await aiRes.json();
-      
-      // הפעלת אפקטים ויזואליים וקוליים
+      const data = await aiRes.json();
       setShowSparkle(true);
       playNotification();
       setTimeout(() => setShowSparkle(false), 3000);
-
-      setMessages(prev => [...prev, { role: 'ai', content: aiData.reply }]);
+      setMessages(prev => [...prev, { role: 'ai', content: data.reply }]);
     } catch (e) {
       setMessages(prev => [...prev, { role: 'ai', content: "בוס, הסריקה נכשלה. נסה שוב." }]);
     } finally {
@@ -112,7 +94,6 @@ export default function SabanAIAssistant() {
   const askAI = async (query) => {
     if (!query || !query.trim() || loading) return;
 
-    // לוגיקת פינג-פונג: זיהוי אם המשתמש הזין מ"ר
     const sqmMatch = query.match(/\d+/);
     if (sqmMatch && messages[messages.length - 1]?.content.toLowerCase().includes('מ"ר')) {
       calculateProductsBySQM(parseInt(sqmMatch[0]));
@@ -155,7 +136,7 @@ export default function SabanAIAssistant() {
 
   const handleShareToWhatsApp = () => {
     const list = cartItems.map(item => `• ${item.name}: ${item.qty} ${item.unit}`).join('\n');
-    const text = encodeURIComponent(`הזמנה חדשה מהיועץ של ח.סבן:\nעבור מספר: ${phone}\n\n${list}\n\nנא להכין לאיסוף/משלוח.`);
+    const text = encodeURIComponent(`הזמנה חדשה מהיועץ של ח.סבן:\nעבור מספר: ${phone}\n\n${list}`);
     window.open(`https://wa.me/972508860896?text=${text}`, '_blank');
   };
 
@@ -168,7 +149,6 @@ export default function SabanAIAssistant() {
 
       <div className="absolute inset-0 bg-[url('https://i.postimg.cc/wTFJbMNp/Designer-1.png')] bg-center bg-cover opacity-5 z-0" />
 
-      {/* Splash Screen */}
       <AnimatePresence>
         {showSplash && (
           <motion.div exit={{ opacity: 0 }} className="fixed inset-0 bg-[#0b141a] z-[100] flex items-center justify-center">
@@ -177,7 +157,6 @@ export default function SabanAIAssistant() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
       <header className="h-16 flex items-center justify-between px-5 bg-[#202c33] border-b border-white/5 z-10 shadow-lg shrink-0">
         <Menu size={22} className="text-slate-400" />
         <div className="flex items-center gap-3">
@@ -198,7 +177,6 @@ export default function SabanAIAssistant() {
         </div>
       </header>
 
-      {/* Main Chat Window */}
       <main className="flex-1 overflow-y-auto p-4 space-y-4 z-10 custom-scrollbar pb-32">
         {messages.map((m, i) => (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'} relative`}>
@@ -227,7 +205,7 @@ export default function SabanAIAssistant() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-center my-4">
               <div className="relative w-48 h-64 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-2xl bg-black">
                 {scanPreview && <img src={scanPreview} className="w-full h-full object-cover opacity-60" />}
-                <motion.div initial={{ top: 0 }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute left-0 w-full h-1 bg-emerald-400 shadow-[0_0_15px_#4ade80] z-20" />
+                <motion.div initial={{ top: 0 }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute left-0 w-full h-1 bg-emerald-400 shadow-[0_0_15px_#10b981] z-20" />
                 <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-emerald-400 animate-pulse tracking-widest uppercase">Analyzing...</div>
               </div>
             </motion.div>
@@ -237,7 +215,6 @@ export default function SabanAIAssistant() {
         <div ref={scrollRef} />
       </main>
 
-      {/* Cart Drawer - רשימת מוצרים דינמית */}
       <AnimatePresence>
         {showCart && (
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="fixed inset-y-0 right-0 w-80 bg-[#111b21] z-50 shadow-2xl border-l border-white/10 p-5 flex flex-col">
@@ -267,7 +244,6 @@ export default function SabanAIAssistant() {
         )}
       </AnimatePresence>
 
-      {/* Footer & Input */}
       <footer className="fixed bottom-0 left-0 right-0 p-3 bg-[#0b141a] border-t border-white/5 z-20">
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-1">
           {QUICK_QUERIES.map((q, i) => (
@@ -282,8 +258,8 @@ export default function SabanAIAssistant() {
             <AnimatePresence>
               {showMenu && (
                 <motion.div initial={{ scale: 0, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0, y: 20 }} className="absolute bottom-14 right-0 flex flex-col gap-3">
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-2xl"><FileText size={20}/></button>
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center shadow-2xl"><Camera size={20}/></button>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-2xl hover:bg-blue-500"><FileText size={20}/></button>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center shadow-2xl hover:bg-emerald-500"><Camera size={20}/></button>
                 </motion.div>
               )}
             </AnimatePresence>
