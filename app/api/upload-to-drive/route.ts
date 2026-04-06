@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
 // הגדרות סגמנט ל-App Router (במקום ה-config הישן)
 export const maxDuration = 60; 
 export const dynamic = 'force-dynamic';
