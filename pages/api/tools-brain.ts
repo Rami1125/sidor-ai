@@ -20,16 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const isVisual = !!imageBase64;
       const parts: any[] = [{ text: isVisual 
-        ? "אתה המומחה של ח.סבן. נתח את התמונה, פעל בשיטת הפינג-פונג: 1. ניתוח זריז. 2. הצעה לפתרון מהיר/מקיף. 3. בקשת מ\"ר: 'אחי, כמה מ\"ר השטח?'. אל תציג רשימת קניות עד שהלקוח לא עונה על הכמות!"
-        : `אתה המומחה של ח.סבן. לקוח (${senderPhone}) שואל: ${message}. ענה קצר ומקצועי.` 
+        ? "אתה המומחה הטכני של ח.סבן. נתח תמונה בשיטת הפינג-פונג: 1. ניתוח זריז. 2. פתרון מהיר/מקיף. 3. בקשת מ\"ר. אם הלקוח נותן מ\"ר, אל תדבר על מכולות, תן רשימת חומרים לאיטום/שיקום בלבד!"
+        : `אתה המומחה של ח.סבן. הלקוח שואל על: ${message}. אם מדובר בכמות מ"ר, ענה: 'סגור אחי, מכין לך רשימה ל-2 מ"ר'.` 
       }];
 
       if (isVisual) {
         parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
-            data: imageBase64.replace(/^data:image\/\w+;base64,/, "")
-          }
+          inline_data: { mime_type: "image/jpeg", data: imageBase64.replace(/^data:image\/\w+;base64,/, "") }
         });
       }
 
@@ -44,13 +41,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const data = await aiRes.json();
       if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        return res.status(200).json({ reply: data.candidates[0].content.parts[0].text, model: modelName });
+        return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
       }
       lastError = data.error?.message || "Empty response";
     } catch (err: any) {
       lastError = err.message;
     }
   }
-
-  return res.status(500).json({ error: `Brain Failure: ${lastError}` });
+  return res.status(500).json({ error: lastError });
 }
