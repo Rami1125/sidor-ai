@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Truck, Package, ChevronLeft } from 'lucide-react';
-
+import SmartOrderSync from '@/components/SmartOrderSync';
 export default function EntryPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
