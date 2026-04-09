@@ -1,4 +1,4 @@
-// pages/admin/master-dashboard.tsx
+// pages/admin/Master-Dashboard.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
@@ -17,14 +17,13 @@ export default function MasterDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [now, setNow] = useState(new Date());
-  const [isDarkMode, setIsDarkMode] = useState(true); // ערכת עיצוב ברירת מחדל
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
     setMounted(true);
     fetchData();
     const interval = setInterval(() => setNow(new Date()), 1000);
     
-    // סנכרון Real-time
     const sub = supabase.channel('master_live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchData())
       .subscribe();
@@ -46,7 +45,6 @@ export default function MasterDashboard() {
     setOrders(data || []);
   };
 
-  // לוגיקת צבעים משתנה לפי דחיפות (Chameleon Effect)
   const getUrgencyStyles = (timeStr: string) => {
     if (!timeStr) return isDarkMode ? "bg-[#1A1D21] border-slate-800" : "bg-white border-slate-100";
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -94,7 +92,6 @@ export default function MasterDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Theme Toggle */}
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
               className={`p-3 rounded-xl border ${theme.border} ${theme.card} hover:scale-105 transition-all`}
@@ -102,7 +99,6 @@ export default function MasterDashboard() {
               {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-indigo-600" />}
             </button>
             
-            {/* Desktop/Mobile Status Indicator */}
             <div className={`hidden md:flex items-center gap-4 px-6 py-3 rounded-xl ${theme.card} border ${theme.border}`}>
               <div className="text-left">
                 <p className="text-xl font-black font-mono leading-none">{now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</p>
@@ -113,7 +109,7 @@ export default function MasterDashboard() {
           </div>
         </header>
 
-        {/* Dashboard Grid - רספונסיבי לחלוטין */}
+        {/* Dashboard Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <AnimatePresence mode="popLayout">
             {orders.map((order) => (
@@ -125,7 +121,6 @@ export default function MasterDashboard() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className={`group rounded-[2rem] p-6 border-2 transition-all duration-300 relative ${theme.card} ${getUrgencyStyles(order.order_time)}`}
               >
-                {/* Card Header */}
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <h3 className="text-xl font-black truncate leading-tight">{order.client_info}</h3>
@@ -138,7 +133,6 @@ export default function MasterDashboard() {
                   </div>
                 </div>
 
-                {/* Body */}
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center gap-3 text-sm font-medium opacity-80">
                     <MapPin className="text-emerald-500" size={16} /> 
@@ -150,7 +144,6 @@ export default function MasterDashboard() {
                   </div>
                 </div>
 
-                {/* Footer Actions */}
                 <div className={`flex items-center justify-between pt-4 border-t ${theme.border}`}>
                    <button 
                     onClick={() => setSelectedOrder(order)}
@@ -167,15 +160,6 @@ export default function MasterDashboard() {
           </AnimatePresence>
         </div>
 
-        {/* Mobile View Navigation (Bottom Bar) */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-inherit border-t border-white/5 flex items-center justify-around px-8 z-40 backdrop-blur-md">
-          <Smartphone size={24} className="text-emerald-500" />
-          <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center -translate-y-6 shadow-xl shadow-emerald-500/40">
-            <Filter size={24} className="text-black" />
-          </div>
-          <User size={24} className="opacity-40" />
-        </div>
-
         {/* AI Supervisor Popup */}
         <AnimatePresence>
           {selectedOrder && (
@@ -183,6 +167,6 @@ export default function MasterDashboard() {
           )}
         </AnimatePresence>
       </div>
-    </Layout>
+    </AppLayout>
   );
 }
