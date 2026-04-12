@@ -1,151 +1,57 @@
-/**
- * NOA AI COMMANDER - CORE API
- * מוח מרכזי לניהול פקודות, גיליונות ודרייב
- */
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { sheetsSync } from '../../lib/google-sheets/sync';
+import { supabase } from '../../lib/supabase';
 
-const CONFIG = {
-  SPREADSHEET_ID: SpreadsheetApp.getActiveSpreadsheet().getId(),
-  LOG_SHEET_NAME: "Log_Noa",
-  SABAN_FILES_FOLDER_ID: "13Mdl9DJSEVVXEGwGifSQV3rTP_B4T6Y6", // שנה ל-ID של התיקייה בדרייב
-  VERSION: "7.2.0"
-};
+// ניהול Pool המודלים שביקשת
+const MODEL_POOL = [
+  "gemini-1.5-flash", 
+  "gemini-3.1-flash-lite-preview",
+  "gemini-2.0-flash" 
+];
 
-/**
- * API Endpoint: מאזין לפקודות מה-Web App
- */
-function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  const response = processIncomingMessage(data.message, data.securityCode);
-  return ContentService.createTextOutput(JSON.stringify(response))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
 
-/**
- * פונקציית הליבה: ניתוח הפקודה וביצוע
- */
-function processIncomingMessage(message, securityCode) {
+  const { message, securityCode, modelIndex = 0 } = req.body;
+
+  if (!message || !securityCode) {
+    return res.status(400).json({ status: "ERROR", message: "Missing params" });
+  }
+
   try {
-    // 1. אימות משתמש מול users_config
-    const user = validateUser(securityCode);
-    if (!user) throw new Error("קוד אבטחה שגוי");
+    // 1. בחירת מודל מה-Pool
+    const selectedModel = MODEL_POOL[modelIndex] || MODEL_POOL[0];
 
-    // 2. ניתוח הפקודה (NLP בסיסי + לוגיקה עסקית של ח. סבן)
-    const decision = analyzeCommand(message, user);
+    // 2. עדכון ב-Supabase (שליטה ובקרה על המאגר)
+    const { error: dbError } = await supabase
+      .from('ai_logs')
+      .insert([{ 
+        command: message, 
+        user_code: securityCode, 
+        model_used: selectedModel,
+        status: 'processing' 
+      }]);
 
-    // 3. כתיבה לגיליון "דוח בוקר" או "זבולון"
-    executeDataWrite(decision, user);
+    if (dbError) throw dbError;
 
-    // 4. תיעוד ביומן (Log_Noa)
-    logAction(user.name, message, decision);
+    // 3. שליחה לביצוע בגוגל (Sheets/Drive) דרך ה-Apps Script
+    const result = await sheetsSync.sendCommand(message, securityCode);
 
-    return {
-      status: "SUCCESS",
-      decision: decision,
-      user: user.name
-    };
+    // 4. עדכון הצלחה ב-Supabase
+    await supabase
+      .from('ai_logs')
+      .update({ status: 'success', response: JSON.stringify(result) })
+      .eq('user_code', securityCode);
 
-  } catch (error) {
-    return { status: "ERROR", message: error.toString() };
+    return res.status(200).json({
+      ...result,
+      model: selectedModel
+    });
+
+  } catch (error: any) {
+    console.error("Brain Error:", error);
+    return res.status(500).json({ status: "ERROR", message: error.message });
   }
-}
-
-/**
- * ניתוח טקסט חופשי לפעולה לוגיסטית
- */
-function analyzeCommand(text, user) {
-  const lowerText = text.toLowerCase();
-  let decision = {
-    action: "UNKNOWN",
-    item: "",
-    qty: 0,
-    driver: "ממתין",
-    status: "בטיפול",
-    details: ""
-  };
-
-  // זיהוי פריטים מהמלאי (חול, בלוק, מלט)
-  if (text.includes("חול")) decision.item = "חול שק גדול";
-  if (text.includes("בלוק")) decision.item = "בלוק 20/20/50";
-  
-  // זיהוי כמויות
-  const matchQty = text.match(/\d+/);
-  decision.qty = matchQty ? parseInt(matchQty[0]) : 1;
-
-  // זיהוי נהג (חכמת למנוף, עלי לידני)
-  if (text.includes("מנוף") || text.includes("בלה")) {
-    decision.driver = "חכמת";
-    decision.details = `הוזמן מנוף עבור ${decision.qty} ${decision.item}`;
-  } else {
-    decision.driver = "עלי";
-    decision.details = `הוזמנה הובלה ידנית עבור ${decision.qty} ${decision.item}`;
-  }
-
-  return decision;
-}
-
-/**
- * כתיבה לגיליונות וניהול קבצים בדרייב
- */
-function executeDataWrite(decision, user) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("דוח בוקר");
-  
-  // כתיבת השורה החדשה למערכת
-  sheet.appendRow([
-    new Date(),
-    "07:00", // ברירת מחדל או חילוץ מהטקסט
-    decision.driver,
-    decision.driver === "חכמת" ? "מנוף" : "משאית",
-    "מחסן החרש",
-    user.project || "כללי",
-    "יעד פרויקט",
-    "✅ מוכנה",
-    decision.details,
-    user.securityCode
-  ]);
-
-  // יצירת תיקייה בדרייב במידה וצריך (חיבור לדרייב)
-  syncToDrive(decision, user);
-}
-
-function syncToDrive(decision, user) {
-  const folder = DriveApp.getFolderById(CONFIG.SABAN_FILES_FOLDER_ID);
-  const subFolderName = `${user.name}_${new Date().toLocaleDateString()}`;
-  
-  // בדיקה אם קיימת תיקייה יומית, אם לא - צור
-  const folders = folder.getFoldersByName(subFolderName);
-  if (!folders.hasNext()) {
-    folder.createFolder(subFolderName);
-  }
-}
-
-function logAction(userName, request, decision) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.LOG_SHEET_NAME);
-  sheet.appendRow([
-    new Date(),
-    userName,
-    request,
-    decision.details,
-    decision.driver,
-    "SUCCESS"
-  ]);
-}
-
-function validateUser(code) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("users_config");
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0].toString() === code.toString()) {
-      return { name: data[i][1], role: data[i][2], securityCode: code };
-    }
-  }
-  return null;
-}
-
-/**
- * פונקציה לשליפת לוגים חיים לממשק
- */
-function getLiveLogs() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Log_Noa");
-  return sheet.getRange(2, 1, 10, 6).getValues(); // 10 שורות אחרונות
 }
