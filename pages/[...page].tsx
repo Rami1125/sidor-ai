@@ -1,5 +1,4 @@
-// pages/[...page].tsx
-import { BuilderComponent, builder } from '@builder.io/sdk';
+import { builder, BuilderComponent } from '@builder.io/react';
 import React from 'react';
 import AppLayout from '../components/Layout';
 
