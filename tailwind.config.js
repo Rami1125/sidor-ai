@@ -8,9 +8,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        emerald: {
-          500: "#10b981",
-        },
+        emerald: { 500: "#10b981" },
       },
     },
   },
