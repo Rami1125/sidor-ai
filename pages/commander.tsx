@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { createClient } from '@supabase/supabase-js';
-import OrderBoard from '@/components/OrderBoard';
+import OrderBoard from '../components/OrderBoard';
 import { ShieldCheck, BellRing, Settings, Loader2 } from 'lucide-react';
 
 const supabase = createClient(
